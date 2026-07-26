@@ -1,5 +1,49 @@
-const controlDocument =
-	'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Webdrop</title></head><body><main><h1>Webdrop control</h1></main></body></html>';
+const controlDocument = `<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Webdrop</title>
+	<link rel="stylesheet" href="/assets/app.css">
+	<script src="/assets/htmx.min.js" defer></script>
+	<script type="module" src="/assets/publish-adapter.js"></script>
+</head>
+<body class="control-page">
+	<main class="control-layout">
+		<header class="control-heading">
+			<span class="badge badge-primary">Webdrop</span>
+			<h1>Publish a static site</h1>
+			<p>Select a directory. It is published only after every file has reached storage.</p>
+		</header>
+		<section class="card publish-card" aria-labelledby="publish-heading">
+			<div class="card-body">
+				<h2 id="publish-heading" class="card-title">New publication</h2>
+				<form id="publish-form" class="publish-form" method="post" action="/publish" enctype="multipart/form-data" hx-post="/publish" hx-target="#publish-result" hx-swap="outerHTML" hx-encoding="multipart/form-data" hx-disabled-elt="#publish-submit">
+					<div class="publish-field">
+						<label class="field-label" for="site-files">Site directory</label>
+						<input id="site-files" class="file-input" type="file" name="site-files" webkitdirectory multiple required aria-describedby="site-files-help selection-summary publish-client-validation">
+						<p id="site-files-help" class="field-help">Use a directory whose root contains index.html.</p>
+						<p id="selection-summary" class="field-help" aria-live="polite">No directory selected.</p>
+						<p id="publish-client-validation" class="alert alert-error" role="alert" hidden></p>
+					</div>
+					<div class="publish-progress">
+						<label class="field-label" for="publish-progress">Upload progress</label>
+						<progress id="publish-progress" class="progress progress-primary" value="0" max="100">0%</progress>
+						<p id="publish-progress-status" class="field-help" aria-live="polite">Waiting to upload.</p>
+					</div>
+					<ul class="publish-limit-list field-help" aria-label="Publish limits">
+						<li>100 files maximum</li>
+						<li>10 MiB maximum per file</li>
+						<li>50 MiB maximum in total</li>
+					</ul>
+					<div class="publish-actions"><button id="publish-submit" class="btn btn-primary" type="submit">Publish site</button></div>
+				</form>
+				<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"></section>
+			</div>
+		</section>
+	</main>
+</body>
+</html>`;
 
 const maxFiles = 100;
 const maxFileBytes = 10 * 1024 * 1024;
@@ -16,6 +60,10 @@ const pagesHeaders = {
 	"Permissions-Policy": "camera=(), geolocation=(), microphone=()",
 	"Referrer-Policy": "no-referrer",
 	"X-Content-Type-Options": "nosniff",
+} as const;
+
+const controlHtmlHeaders = {
+	"Content-Type": "text/html; charset=utf-8",
 } as const;
 
 const contentTypes = new Map<string, string>([
@@ -77,6 +125,11 @@ interface PublishStorage {
 	): Promise<unknown>;
 }
 
+interface PublishedSite {
+	siteId: string;
+	url: string;
+}
+
 function notFound(): Response {
 	return new Response("Not found", { status: 404 });
 }
@@ -95,6 +148,34 @@ function conflict(): Response {
 
 function internalError(): Response {
 	return new Response("Unable to publish site", { status: 500 });
+}
+
+function escapeHtml(value: string): string {
+	return value.replace(/[&<>'"]/g, (character) => {
+		const entities: Record<string, string> = {
+			"&": "&amp;",
+			"<": "&lt;",
+			">": "&gt;",
+			"'": "&#39;",
+			'"': "&quot;",
+		};
+		return entities[character] ?? character;
+	});
+}
+
+function publishErrorFragment(message: string, status: number): Response {
+	return new Response(
+		`<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"><div class="alert alert-error" role="alert"><span>${escapeHtml(message)}</span></div></section>`,
+		{ status, headers: controlHtmlHeaders },
+	);
+}
+
+function publishSuccessFragment(url: string): Response {
+	const safeUrl = escapeHtml(url);
+	return new Response(
+		`<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"><div class="alert alert-success" role="status"><span>Site is live.</span><a class="link" href="${safeUrl}">Open published site</a></div></section>`,
+		{ status: 201, headers: controlHtmlHeaders },
+	);
 }
 
 function pagesMethodNotAllowed(): Response {
@@ -261,6 +342,17 @@ function isResponse(value: PublishPayload | Response): value is Response {
 	return value instanceof Response;
 }
 
+function isPublishedSite(value: unknown): value is PublishedSite {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"siteId" in value &&
+		"url" in value &&
+		typeof value.siteId === "string" &&
+		typeof value.url === "string"
+	);
+}
+
 function isSiteMetadata(value: unknown): value is SiteMetadata {
 	return (
 		typeof value === "object" &&
@@ -399,30 +491,93 @@ export async function publishSite(
 	return Response.json(
 		{
 			siteId,
-			url: `https://${pagesHostname}${pagesPrefix}${siteId}/`,
+			url: publishedSiteUrl(request, pagesHostname, siteId),
 		},
 		{ status: 201 },
 	);
 }
 
-function handleControl(
+function publishedSiteUrl(
+	request: Request,
+	pagesHostname: string,
+	siteId: string,
+): string {
+	const requestUrl = new URL(request.url);
+	const port = requestUrl.port === "" ? "" : `:${requestUrl.port}`;
+	return `${requestUrl.protocol}//${pagesHostname}${port}${pagesPrefix}${siteId}/`;
+}
+
+function isSameOriginRequest(request: Request): boolean {
+	const origin = request.headers.get("Origin");
+	return origin !== null && origin === new URL(request.url).origin;
+}
+
+function isHtmxRequest(request: Request): boolean {
+	return request.headers.get("HX-Request") === "true";
+}
+
+function publishFailureMessage(status: number): string {
+	switch (status) {
+		case 400:
+			return "We could not use this directory. Check the file limits and paths.";
+		case 409:
+			return "This publish ID is unavailable. Please try again.";
+		default:
+			return "We could not publish this site. Please try again.";
+	}
+}
+
+async function handleControlPublish(
 	request: Request,
 	env: Env,
-): Promise<Response> | Response {
+): Promise<Response> {
+	if (!isSameOriginRequest(request)) {
+		return isHtmxRequest(request)
+			? publishErrorFragment(
+					"This publish request did not come from this site.",
+					403,
+				)
+			: new Response("Forbidden", { status: 403 });
+	}
+
+	const response = await publishSite(request, env.SITES, env.PAGES_HOSTNAME);
+	if (!isHtmxRequest(request)) {
+		return response;
+	}
+
+	if (response.status !== 201) {
+		return publishErrorFragment(
+			publishFailureMessage(response.status),
+			response.status,
+		);
+	}
+
+	const publishedSite: unknown = await response.json();
+	if (!isPublishedSite(publishedSite)) {
+		return publishErrorFragment(
+			"We could not publish this site. Please try again.",
+			500,
+		);
+	}
+
+	return publishSuccessFragment(publishedSite.url);
+}
+
+async function handleControl(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
 	if (url.pathname === "/publish") {
-		return publishSite(request, env.SITES, env.PAGES_HOSTNAME);
+		return handleControlPublish(request, env);
+	}
+
+	if (request.method === "GET" && url.pathname.startsWith("/assets/")) {
+		return env.ASSETS.fetch(request);
 	}
 
 	if (request.method !== "GET" || url.pathname !== "/") {
 		return notFound();
 	}
 
-	return new Response(controlDocument, {
-		headers: {
-			"Content-Type": "text/html; charset=utf-8",
-		},
-	});
+	return new Response(controlDocument, { headers: controlHtmlHeaders });
 }
 
 async function handlePages(request: Request, env: Env): Promise<Response> {

@@ -57,6 +57,18 @@ function publishForm(entries: UploadEntry[]): FormData {
 async function publish(entries: UploadEntry[]): Promise<Response> {
 	return exports.default.fetch(`${controlOrigin}/publish`, {
 		method: "POST",
+		headers: { Origin: controlOrigin },
+		body: publishForm(entries),
+	});
+}
+
+async function htmxPublish(entries: UploadEntry[]): Promise<Response> {
+	return exports.default.fetch(`${controlOrigin}/publish`, {
+		method: "POST",
+		headers: {
+			"HX-Request": "true",
+			Origin: controlOrigin,
+		},
 		body: publishForm(entries),
 	});
 }
@@ -131,7 +143,11 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(response.headers.get("Content-Type")).toBe(
 			"text/html; charset=utf-8",
 		);
-		expect(await response.text()).toContain("Webdrop control");
+		const document = await response.text();
+		expect(document).toContain("Publish a static site");
+		expect(document).toContain('src="/assets/htmx.min.js"');
+		expect(document).toContain("webkitdirectory");
+		expect(document).toContain('hx-post="/publish"');
 	});
 
 	it("returns 404 for cross-plane and unknown routes", async () => {
@@ -156,9 +172,77 @@ describe("Webdrop M1.1 host dispatch", () => {
 			expect(response.status).toBe(404);
 		}
 	});
+
+	it("serves htmx and generated UI assets from the control origin", async () => {
+		const [htmx, adapter, uploadHelper, styles] = await Promise.all([
+			exports.default.fetch(`${controlOrigin}/assets/htmx.min.js`),
+			exports.default.fetch(`${controlOrigin}/assets/publish-adapter.js`),
+			exports.default.fetch(`${controlOrigin}/assets/publish-upload.js`),
+			exports.default.fetch(`${controlOrigin}/assets/app.css`),
+		]);
+
+		for (const response of [htmx, adapter, uploadHelper, styles]) {
+			expect(response.status).toBe(200);
+		}
+		expect(await htmx.text()).toContain("htmx");
+		expect(await adapter.text()).toContain("./publish-upload.js");
+		expect(await uploadHelper.text()).toContain("setHtmxMultipartParameters");
+		const css = await styles.text();
+		for (const componentClass of [
+			"alert",
+			"alert-error",
+			"alert-success",
+			"badge",
+			"badge-primary",
+			"btn",
+			"btn-primary",
+			"card",
+			"card-body",
+			"card-title",
+			"file-input",
+			"link",
+			"progress",
+			"progress-primary",
+		]) {
+			expect(css).toContain(`.${componentClass}`);
+		}
+	});
 });
 
 describe("Webdrop M2.1 publish boundary", () => {
+	it("renders htmx success and failure fragments for the publish target", async () => {
+		const success = await htmxPublish([
+			{ path: "index.html", content: "<h1>htmx</h1>" },
+		]);
+		expect(success.status).toBe(201);
+		expect(success.headers.get("Content-Type")).toBe(
+			"text/html; charset=utf-8",
+		);
+		expect(await success.text()).toContain('id="publish-result"');
+
+		const failure = await htmxPublish([
+			{ path: "missing-index.html", content: "invalid" },
+		]);
+		expect(failure.status).toBe(400);
+		expect(await failure.text()).toContain('role="alert"');
+	});
+
+	it("rejects cross-origin publish requests before storage writes", async () => {
+		const objectCountBefore = await storedObjectCount();
+		const response = await exports.default.fetch(`${controlOrigin}/publish`, {
+			method: "POST",
+			headers: {
+				"HX-Request": "true",
+				Origin: "https://other.example.test",
+			},
+			body: publishForm([{ path: "index.html", content: "blocked" }]),
+		});
+
+		expect(response.status).toBe(403);
+		expect(await response.text()).toContain('role="alert"');
+		expect(await storedObjectCount()).toBe(objectCountBefore);
+	});
+
 	it("writes uploading metadata, files, then active metadata in order", async () => {
 		const siteId = "00000000-0000-4000-8000-000000000003";
 		const storage = recordingStorage();
@@ -197,6 +281,26 @@ describe("Webdrop M2.1 publish boundary", () => {
 				totalBytes: 14,
 			}),
 		]);
+	});
+
+	it("uses the request scheme and port for local pages URLs", async () => {
+		const siteId = "00000000-0000-4000-8000-000000000006";
+		const response = await publishSite(
+			new Request("https://control.localhost:8787/publish", {
+				method: "POST",
+				body: publishForm([{ path: "index.html", content: "local" }]),
+			}),
+			recordingStorage(),
+			"pages.localhost",
+			() => siteId,
+		);
+
+		expect(response.status).toBe(201);
+		const result: unknown = await response.json();
+		if (!isPublishResult(result)) {
+			throw new Error("Expected a publish result");
+		}
+		expect(result.url).toBe(`https://pages.localhost:8787/p/${siteId}/`);
 	});
 
 	it("keeps failed uploads hidden and does not return a publish URL", async () => {
@@ -401,6 +505,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 
 		const response = await exports.default.fetch(`${controlOrigin}/publish`, {
 			method: "POST",
+			headers: { Origin: controlOrigin },
 			body: formData,
 		});
 
@@ -418,6 +523,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 
 		const response = await exports.default.fetch(`${controlOrigin}/publish`, {
 			method: "POST",
+			headers: { Origin: controlOrigin },
 			body: formData,
 		});
 

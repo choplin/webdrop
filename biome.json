@@ -7,11 +7,17 @@
 			"!node_modules",
 			"!.wrangler",
 			"!coverage",
+			"!public/assets",
 			"!types/generated/worker-configuration.d.ts"
 		]
 	},
 	"formatter": {
 		"indentStyle": "tab"
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
 	},
 	"linter": {
 		"enabled": true,

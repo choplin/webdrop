@@ -7,6 +7,11 @@
 	"observability": {
 		"enabled": true
 	},
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		"run_worker_first": true
+	},
 	"vars": {
 		// These are public hostnames. Cloudflare Access configuration is intentionally M4 scope.
 		"CONTROL_HOSTNAME": "control.example.test",

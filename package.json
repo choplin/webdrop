@@ -5,17 +5,25 @@
 	"type": "module",
 	"packageManager": "pnpm@11.17.0",
 	"scripts": {
-		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit",
+		"build:assets": "tsc --project tsconfig.browser.json && mkdir -p public/assets && tailwindcss --input client/styles.css --output public/assets/app.css --minify && cp node_modules/htmx.org/dist/htmx.min.js public/assets/htmx.min.js",
+		"build:client": "tsc --project tsconfig.browser.json",
+		"build:styles": "mkdir -p public/assets && tailwindcss --input client/styles.css --output public/assets/app.css --minify",
+		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit",
+		"copy:htmx": "mkdir -p public/assets && cp node_modules/htmx.org/dist/htmx.min.js public/assets/htmx.min.js",
 		"format": "biome format --write .",
 		"generate:types": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
 		"test": "mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
-		"typecheck": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit"
+		"typecheck": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",
 		"@cloudflare/vitest-pool-workers": "0.18.8",
 		"@cloudflare/workers-types": "5.20260726.1",
+		"@tailwindcss/cli": "4.3.3",
 		"@types/node": "26.1.1",
+		"daisyui": "5.7.4",
+		"htmx.org": "2.0.10",
+		"tailwindcss": "4.3.3",
 		"typescript": "7.0.2",
 		"vitest": "4.1.10",
 		"wrangler": "4.114.0"

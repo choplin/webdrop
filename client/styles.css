@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+	themes: light --default;
+}
+
+@layer components {
+	.control-page {
+		min-block-size: 100vh;
+		margin: 0;
+		background: var(--color-base-200);
+		color: var(--color-base-content);
+	}
+
+	.control-layout {
+		box-sizing: border-box;
+		inline-size: min(100% - 2rem, 48rem);
+		margin-inline: auto;
+		padding-block: 3rem;
+		display: grid;
+		gap: 1.5rem;
+	}
+
+	.control-heading {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.publish-card {
+		border: 1px solid var(--color-base-300);
+		background: var(--color-base-100);
+		box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+	}
+
+	.publish-form {
+		display: grid;
+		gap: 1.25rem;
+	}
+
+	.publish-field {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.field-label {
+		font-weight: 600;
+	}
+
+	.field-help {
+		font-size: 0.875rem;
+		color: color-mix(in srgb, var(--color-base-content) 70%, transparent);
+	}
+
+	.publish-progress {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.publish-actions {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.publish-result {
+		min-block-size: 1.5rem;
+	}
+
+	.publish-limit-list {
+		margin: 0;
+		padding-inline-start: 1.25rem;
+		display: grid;
+		gap: 0.25rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+		scroll-behavior: auto;
+		transition-duration: 0.01ms;
+	}
+}
