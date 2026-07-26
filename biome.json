@@ -1,0 +1,22 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+	"files": {
+		"includes": [
+			"**",
+			"!**/.agents",
+			"!node_modules",
+			"!.wrangler",
+			"!coverage",
+			"!types/generated/worker-configuration.d.ts"
+		]
+	},
+	"formatter": {
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended"
+		}
+	}
+}

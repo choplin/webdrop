@@ -1,0 +1,15 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "webdrop",
+	"main": "src/worker.ts",
+	"compatibility_date": "2026-07-26",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		// These are public hostnames. Cloudflare Access configuration is intentionally M4 scope.
+		"CONTROL_HOSTNAME": "control.example.test",
+		"PAGES_HOSTNAME": "pages.example.test"
+	}
+}

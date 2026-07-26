@@ -1,0 +1,23 @@
+{
+	"name": "webdrop",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@11.17.0",
+	"scripts": {
+		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit",
+		"format": "biome format --write .",
+		"generate:types": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
+		"test": "mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
+		"typecheck": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.5",
+		"@cloudflare/vitest-pool-workers": "0.18.8",
+		"@cloudflare/workers-types": "5.20260726.1",
+		"@types/node": "26.1.1",
+		"typescript": "7.0.2",
+		"vitest": "4.1.10",
+		"wrangler": "4.114.0"
+	}
+}
