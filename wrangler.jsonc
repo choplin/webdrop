@@ -11,5 +11,11 @@
 		// These are public hostnames. Cloudflare Access configuration is intentionally M4 scope.
 		"CONTROL_HOSTNAME": "control.example.test",
 		"PAGES_HOSTNAME": "pages.example.test"
-	}
+	},
+	"r2_buckets": [
+		{
+			"binding": "SITES",
+			"bucket_name": "webdrop-sites"
+		}
+	]
 }
