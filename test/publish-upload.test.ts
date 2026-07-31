@@ -38,7 +38,7 @@ describe("browser publish upload preparation", () => {
 			]),
 		).toEqual({
 			error:
-				"The selected directory paths are inconsistent. Choose the directory again.",
+				"The selected folder paths are inconsistent. Choose the folder again.",
 		});
 	});
 
@@ -54,7 +54,7 @@ describe("browser publish upload preparation", () => {
 			]),
 		).toEqual({
 			error:
-				"The selected directory paths are inconsistent. Choose the directory again.",
+				"The selected folder paths are inconsistent. Choose the folder again.",
 		});
 	});
 
@@ -65,6 +65,18 @@ describe("browser publish upload preparation", () => {
 				{ name: "app.js", size: 20 },
 			]),
 		).toEqual({ paths: ["index.html", "app.js"] });
+	});
+
+	it("publishes one dropped HTML file as the root index", () => {
+		expect(
+			selectedRelativePaths([
+				{
+					name: "standalone.html",
+					size: 10,
+					relativePath: "standalone.html",
+				},
+			]),
+		).toEqual({ paths: ["index.html"] });
 	});
 
 	it("uses explicit relative paths collected from a dropped directory", () => {

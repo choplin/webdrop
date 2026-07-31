@@ -33,7 +33,7 @@ function isSafeRelativePath(path) {
 }
 function prepareUpload(selectedFiles) {
     if (selectedFiles.length === 0) {
-        return "Choose a directory containing index.html.";
+        return "Drop an HTML file or choose a folder containing index.html.";
     }
     if (selectedFiles.length > maxFiles) {
         return "A publish can contain at most 100 files.";
@@ -52,7 +52,7 @@ function prepareUpload(selectedFiles) {
         return "One or more selected paths are not safe to publish.";
     }
     if (!paths.includes("index.html")) {
-        return "The selected directory must contain index.html at its root.";
+        return "The selected folder must contain index.html at its root.";
     }
     if (new Set(paths).size !== paths.length) {
         return "Each selected file must have a unique relative path.";
@@ -64,7 +64,7 @@ function prepareUpload(selectedFiles) {
         }
         totalBytes += file.size;
         if (totalBytes > maxTotalBytes) {
-            return "The selected directory is larger than 50 MiB.";
+            return "The selected file or folder is larger than 50 MiB.";
         }
     }
     const formData = new FormData();
@@ -241,7 +241,7 @@ form?.addEventListener("drop", async (event) => {
     }
     catch {
         droppedFiles = null;
-        showClientValidation("The dropped folder could not be read. Choose the directory instead.");
+        showClientValidation("The dropped file or folder could not be read. Choose the folder instead.");
         if (selectionSummary) {
             selectionSummary.textContent = "No publish request is ready.";
         }

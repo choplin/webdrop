@@ -42,13 +42,29 @@ export function selectedRelativePaths(
 	const hasDirectoryPath = directoryPaths.some((path) => path.length > 0);
 
 	if (!hasDirectoryPath) {
+		if (
+			selectedFiles.length === 1 &&
+			/\.html?$/i.test(selectedFiles[0]?.name ?? "")
+		) {
+			return { paths: ["index.html"] };
+		}
+
 		return { paths: selectedFiles.map((file) => file.name) };
+	}
+
+	if (
+		selectedFiles.length === 1 &&
+		directoryPaths[0] !== undefined &&
+		!directoryPaths[0].includes("/") &&
+		/\.html?$/i.test(selectedFiles[0]?.name ?? "")
+	) {
+		return { paths: ["index.html"] };
 	}
 
 	if (directoryPaths.some((path) => path.length === 0)) {
 		return {
 			error:
-				"The selected directory paths are inconsistent. Choose the directory again.",
+				"The selected folder paths are inconsistent. Choose the folder again.",
 		};
 	}
 
@@ -63,7 +79,7 @@ export function selectedRelativePaths(
 	) {
 		return {
 			error:
-				"The selected directory paths are inconsistent. Choose the directory again.",
+				"The selected folder paths are inconsistent. Choose the folder again.",
 		};
 	}
 

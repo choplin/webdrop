@@ -20,7 +20,7 @@ const controlDocument = `<!doctype html>
 			<section class="publish-focus" aria-labelledby="publish-page-title">
 				<header class="publish-introduction">
 					<h1 id="publish-page-title">Put your site online.</h1>
-					<p>Choose a folder with <code>index.html</code>. Get a shareable URL when every file is published.</p>
+					<p>Publish a single HTML file or a folder with <code>index.html</code>. Get a shareable URL when every file is online.</p>
 				</header>
 				<section class="card publish-card" aria-labelledby="publish-heading">
 					<div class="card-body publish-card-body">
@@ -28,15 +28,15 @@ const controlDocument = `<!doctype html>
 							<input id="site-files" class="file-input publish-file-input" type="file" name="site-files" webkitdirectory multiple aria-required="true" aria-describedby="site-files-help selection-summary publish-client-validation">
 							<div class="publish-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" /><path d="M12 16V10m-2.5 2.5L12 10l2.5 2.5" /></svg></div>
 							<div class="publish-copy">
-								<h2 id="publish-heading" class="card-title">Drop a folder to publish</h2>
-								<p id="site-files-help" class="field-help">Its root must contain <code>index.html</code>.</p>
+								<h2 id="publish-heading" class="card-title">Drop an HTML file or folder</h2>
+								<p id="site-files-help" class="field-help">Folders must contain <code>index.html</code> at their root.</p>
 							</div>
 							<div class="publish-picker-actions">
-								<label class="btn btn-primary publish-picker" for="site-files"><span>Choose directory</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></label>
+								<label class="btn btn-primary publish-picker" for="site-files"><span>Choose folder</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></label>
 								<button id="publish-submit" class="btn btn-primary publish-submit" type="submit"><span>Publish site</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></button>
 							</div>
 							<div class="publish-selection">
-								<p id="selection-summary" class="field-help" aria-live="polite">No directory selected.</p>
+								<p id="selection-summary" class="field-help" aria-live="polite">No file or folder selected.</p>
 								<p id="publish-client-validation" class="alert alert-error" role="alert" hidden></p>
 							</div>
 							<div class="publish-progress" aria-live="polite">
@@ -49,7 +49,7 @@ const controlDocument = `<!doctype html>
 				</section>
 				<div class="publish-metadata">
 					<p class="publish-safety"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3.5" y="7" width="9" height="6.5" rx="1" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>Files stay private until publishing is complete.</p>
-					<ul class="publish-limit-list" aria-label="Publish limits"><li>100 files</li><li>10 MiB / file</li><li>50 MiB total</li></ul>
+					<div class="publish-limits"><span id="upload-limits-label" class="publish-limit-label">Upload limits</span><ul class="publish-limit-list" aria-labelledby="upload-limits-label"><li>100 files</li><li>10 MiB / file</li><li>50 MiB total</li></ul></div>
 				</div>
 				<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"></section>
 			</section>
@@ -532,7 +532,7 @@ function isHtmxRequest(request: Request): boolean {
 function publishFailureMessage(status: number): string {
 	switch (status) {
 		case 400:
-			return "We could not use this directory. Check the file limits and paths.";
+			return "We could not use this file or folder. Check the upload limits and paths.";
 		case 409:
 			return "This publish ID is unavailable. Please try again.";
 		default:

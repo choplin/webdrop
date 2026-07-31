@@ -108,7 +108,7 @@ function isSafeRelativePath(path: string): boolean {
 
 function prepareUpload(selectedFiles: UploadFile[]): PreparedUpload | string {
 	if (selectedFiles.length === 0) {
-		return "Choose a directory containing index.html.";
+		return "Drop an HTML file or choose a folder containing index.html.";
 	}
 
 	if (selectedFiles.length > maxFiles) {
@@ -133,7 +133,7 @@ function prepareUpload(selectedFiles: UploadFile[]): PreparedUpload | string {
 	}
 
 	if (!paths.includes("index.html")) {
-		return "The selected directory must contain index.html at its root.";
+		return "The selected folder must contain index.html at its root.";
 	}
 
 	if (new Set(paths).size !== paths.length) {
@@ -148,7 +148,7 @@ function prepareUpload(selectedFiles: UploadFile[]): PreparedUpload | string {
 
 		totalBytes += file.size;
 		if (totalBytes > maxTotalBytes) {
-			return "The selected directory is larger than 50 MiB.";
+			return "The selected file or folder is larger than 50 MiB.";
 		}
 	}
 
@@ -381,7 +381,7 @@ form?.addEventListener("drop", async (event) => {
 	} catch {
 		droppedFiles = null;
 		showClientValidation(
-			"The dropped folder could not be read. Choose the directory instead.",
+			"The dropped file or folder could not be read. Choose the folder instead.",
 		);
 		if (selectionSummary) {
 			selectionSummary.textContent = "No publish request is ready.";
