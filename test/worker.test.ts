@@ -135,6 +135,44 @@ function parseJson(value: string): unknown {
 	return JSON.parse(value);
 }
 
+function closingBrace(css: string, openingBraceIndex: number): number {
+	let depth = 0;
+	for (let index = openingBraceIndex; index < css.length; index += 1) {
+		const character = css[index];
+		if (character === "{") {
+			depth += 1;
+		} else if (character === "}") {
+			depth -= 1;
+			if (depth === 0) {
+				return index;
+			}
+		}
+	}
+
+	return -1;
+}
+
+function cssRule(
+	css: string,
+	selector: string,
+): { start: number; body: string } | null {
+	const start = css.indexOf(`${selector}{`);
+	if (start === -1) {
+		return null;
+	}
+
+	const openingBraceIndex = start + selector.length;
+	const closingBraceIndex = closingBrace(css, openingBraceIndex);
+	if (closingBraceIndex === -1) {
+		return null;
+	}
+
+	return {
+		start,
+		body: css.slice(openingBraceIndex + 1, closingBraceIndex),
+	};
+}
+
 describe("Webdrop M1.1 host dispatch", () => {
 	it("serves the control document only from the control origin root", async () => {
 		const response = await exports.default.fetch(`${controlOrigin}/`);
@@ -190,7 +228,11 @@ describe("Webdrop M1.1 host dispatch", () => {
 			expect(response.status).toBe(200);
 		}
 		expect(await htmx.text()).toContain("htmx");
-		expect(await adapter.text()).toContain("./publish-upload.js");
+		const adapterSource = await adapter.text();
+		expect(adapterSource).toContain("./publish-upload.js");
+		expect(adapterSource).toContain(
+			'fileInput.disabled = state === "uploading"',
+		);
 		expect(await uploadHelper.text()).toContain("setHtmxMultipartParameters");
 		const css = await styles.text();
 		for (const componentClass of [
@@ -210,6 +252,51 @@ describe("Webdrop M1.1 host dispatch", () => {
 			"progress-primary",
 		]) {
 			expect(css).toContain(`.${componentClass}`);
+		}
+
+		const utilitiesLayerStart = css.indexOf("@layer utilities{");
+		const utilitiesLayerEnd = closingBrace(css, utilitiesLayerStart);
+		expect(utilitiesLayerStart).toBeGreaterThan(-1);
+		expect(utilitiesLayerEnd).toBeGreaterThan(utilitiesLayerStart);
+
+		for (const [selector, declaration] of [
+			[".publish-submit,.publish-selection,.publish-progress", "display:none"],
+			[
+				".publish-form:not([data-publish-state]) .publish-picker,.publish-form[data-publish-state=invalid] .publish-picker",
+				"display:inline-flex",
+			],
+			[
+				".publish-form[data-publish-state=ready] .publish-picker,.publish-form[data-publish-state=ready] .publish-progress",
+				"display:none",
+			],
+			[
+				".publish-form[data-publish-state=ready] .publish-submit",
+				"display:inline-flex",
+			],
+			[
+				".publish-form[data-publish-state=ready] .publish-selection,.publish-form[data-publish-state=invalid] .publish-selection",
+				"display:block",
+			],
+			[
+				".publish-form[data-publish-state=uploading] .publish-picker,.publish-form[data-publish-state=uploading] .publish-submit,.publish-form[data-publish-state=uploading] .publish-selection",
+				"display:none",
+			],
+			[
+				".publish-form[data-publish-state=uploading] .publish-progress",
+				"display:grid",
+			],
+			[
+				".publish-file-input:focus-visible~.publish-picker-actions .publish-picker",
+				"outline:3px solid #0066ff47",
+			],
+		] as const) {
+			const rule = cssRule(css, selector);
+			expect(rule).not.toBeNull();
+			if (!rule) {
+				throw new Error(`Missing CSS rule for ${selector}`);
+			}
+			expect(rule.start).toBeGreaterThan(utilitiesLayerEnd);
+			expect(rule.body).toContain(declaration);
 		}
 	});
 });

@@ -172,6 +172,10 @@ function setPublishState(state: "invalid" | "ready" | "uploading"): void {
 	if (form) {
 		form.dataset.publishState = state;
 	}
+
+	if (fileInput) {
+		fileInput.disabled = state === "uploading";
+	}
 }
 
 function showClientValidation(message: string | null): void {
