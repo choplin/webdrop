@@ -25,10 +25,10 @@ const controlDocument = `<!doctype html>
 				<section class="card publish-card" aria-labelledby="publish-heading">
 					<div class="card-body publish-card-body">
 						<form id="publish-form" class="publish-form" method="post" action="/publish" enctype="multipart/form-data" hx-post="/publish" hx-target="#publish-result" hx-swap="outerHTML" hx-encoding="multipart/form-data" hx-disabled-elt="#publish-submit">
-							<input id="site-files" class="file-input publish-file-input" type="file" name="site-files" webkitdirectory multiple required aria-describedby="site-files-help selection-summary publish-client-validation">
+							<input id="site-files" class="file-input publish-file-input" type="file" name="site-files" webkitdirectory multiple aria-required="true" aria-describedby="site-files-help selection-summary publish-client-validation">
 							<div class="publish-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" /><path d="M12 16V10m-2.5 2.5L12 10l2.5 2.5" /></svg></div>
 							<div class="publish-copy">
-								<h2 id="publish-heading" class="card-title">Choose a folder to publish</h2>
+								<h2 id="publish-heading" class="card-title">Drop a folder to publish</h2>
 								<p id="site-files-help" class="field-help">Its root must contain <code>index.html</code>.</p>
 							</div>
 							<div class="publish-picker-actions">

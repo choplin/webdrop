@@ -2,6 +2,7 @@ export interface SelectedFile {
 	name: string;
 	size: number;
 	webkitRelativePath?: string;
+	relativePath?: string;
 }
 
 export type RelativePathResult = { paths: string[] } | { error: string };
@@ -36,7 +37,7 @@ export function selectedRelativePaths(
 ): RelativePathResult {
 	const selectedFiles = Array.from(files);
 	const directoryPaths = selectedFiles.map(
-		(file) => file.webkitRelativePath ?? "",
+		(file) => file.relativePath ?? file.webkitRelativePath ?? "",
 	);
 	const hasDirectoryPath = directoryPaths.some((path) => path.length > 0);
 

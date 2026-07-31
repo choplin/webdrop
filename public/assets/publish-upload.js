@@ -16,7 +16,7 @@ function isSafeDirectoryName(value) {
 }
 export function selectedRelativePaths(files) {
     const selectedFiles = Array.from(files);
-    const directoryPaths = selectedFiles.map((file) => file.webkitRelativePath ?? "");
+    const directoryPaths = selectedFiles.map((file) => file.relativePath ?? file.webkitRelativePath ?? "");
     const hasDirectoryPath = directoryPaths.some((path) => path.length > 0);
     if (!hasDirectoryPath) {
         return { paths: selectedFiles.map((file) => file.name) };

@@ -67,6 +67,23 @@ describe("browser publish upload preparation", () => {
 		).toEqual({ paths: ["index.html", "app.js"] });
 	});
 
+	it("uses explicit relative paths collected from a dropped directory", () => {
+		expect(
+			selectedRelativePaths([
+				{
+					name: "index.html",
+					size: 10,
+					relativePath: "site/index.html",
+				},
+				{
+					name: "app.js",
+					size: 20,
+					relativePath: "site/assets/app.js",
+				},
+			]),
+		).toEqual({ paths: ["index.html", "assets/app.js"] });
+	});
+
 	it("replaces htmx's formDataProxy parameters with multipart FormData", () => {
 		const detail: { parameters: unknown } = { parameters: { proxy: true } };
 		const formData = new FormData();

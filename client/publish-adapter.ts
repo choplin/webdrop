@@ -18,6 +18,44 @@ interface PreparedUpload {
 	totalBytes: number;
 }
 
+interface UploadFile {
+	file: File;
+	relativePath?: string;
+}
+
+interface DroppedFileEntry {
+	isFile: true;
+	isDirectory: false;
+	name: string;
+	file(
+		successCallback: (file: File) => void,
+		errorCallback?: (error: DOMException) => void,
+	): void;
+}
+
+interface DroppedDirectoryReader {
+	readEntries(
+		successCallback: (entries: DroppedEntry[]) => void,
+		errorCallback?: (error: DOMException) => void,
+	): void;
+}
+
+interface DroppedDirectoryEntry {
+	isFile: false;
+	isDirectory: true;
+	name: string;
+	createReader(): DroppedDirectoryReader;
+}
+
+type DroppedEntry = DroppedFileEntry | DroppedDirectoryEntry;
+
+function droppedEntry(item: DataTransferItem): DroppedEntry | null {
+	const candidate = item as unknown as {
+		webkitGetAsEntry?: () => DroppedEntry | null;
+	};
+	return candidate.webkitGetAsEntry?.call(item) ?? null;
+}
+
 interface HtmxProgressDetail {
 	lengthComputable: boolean;
 	loaded: number;
@@ -68,8 +106,7 @@ function isSafeRelativePath(path: string): boolean {
 	);
 }
 
-function prepareUpload(files: FileList): PreparedUpload | string {
-	const selectedFiles = Array.from(files);
+function prepareUpload(selectedFiles: UploadFile[]): PreparedUpload | string {
 	if (selectedFiles.length === 0) {
 		return "Choose a directory containing index.html.";
 	}
@@ -78,7 +115,14 @@ function prepareUpload(files: FileList): PreparedUpload | string {
 		return "A publish can contain at most 100 files.";
 	}
 
-	const relativePaths = selectedRelativePaths(selectedFiles);
+	const relativePaths = selectedRelativePaths(
+		selectedFiles.map(({ file, relativePath }) => ({
+			name: file.name,
+			size: file.size,
+			webkitRelativePath: file.webkitRelativePath,
+			relativePath,
+		})),
+	);
 	if ("error" in relativePaths) {
 		return relativePaths.error;
 	}
@@ -97,7 +141,7 @@ function prepareUpload(files: FileList): PreparedUpload | string {
 	}
 
 	let totalBytes = 0;
-	for (const file of selectedFiles) {
+	for (const { file } of selectedFiles) {
 		if (file.size > maxFileBytes) {
 			return `${file.name} is larger than 10 MiB.`;
 		}
@@ -114,7 +158,7 @@ function prepareUpload(files: FileList): PreparedUpload | string {
 		path,
 	}));
 	formData.set("files", JSON.stringify(parts));
-	for (const [index, file] of selectedFiles.entries()) {
+	for (const [index, { file }] of selectedFiles.entries()) {
 		formData.set(`file-${index}`, file, file.name);
 	}
 
@@ -167,6 +211,87 @@ const progress =
 const progressStatus = document.querySelector<HTMLElement>(
 	"#publish-progress-status",
 );
+let droppedFiles: UploadFile[] | null = null;
+let dragDepth = 0;
+
+function fileFromEntry(entry: DroppedFileEntry): Promise<File> {
+	return new Promise((resolve, reject) => {
+		entry.file(resolve, reject);
+	});
+}
+
+function entriesFromReader(
+	reader: DroppedDirectoryReader,
+): Promise<DroppedEntry[]> {
+	return new Promise((resolve, reject) => {
+		const entries: DroppedEntry[] = [];
+		const readBatch = () => {
+			reader.readEntries((batch) => {
+				if (batch.length === 0) {
+					resolve(entries);
+					return;
+				}
+
+				entries.push(...batch);
+				readBatch();
+			}, reject);
+		};
+		readBatch();
+	});
+}
+
+async function filesFromEntry(
+	entry: DroppedEntry,
+	parentPath = "",
+): Promise<UploadFile[]> {
+	const relativePath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+	if (entry.isFile) {
+		return [{ file: await fileFromEntry(entry), relativePath }];
+	}
+
+	const children = await entriesFromReader(entry.createReader());
+	const nestedFiles = await Promise.all(
+		children.map((child) => filesFromEntry(child, relativePath)),
+	);
+	return nestedFiles.flat();
+}
+
+async function filesFromDrop(
+	dataTransfer: DataTransfer,
+): Promise<UploadFile[]> {
+	const items = Array.from(dataTransfer.items);
+	const entries = items
+		.filter((item) => item.kind === "file")
+		.map(droppedEntry)
+		.filter(
+			(entry): entry is DroppedEntry => entry !== null && entry !== undefined,
+		);
+
+	if (entries.length > 0) {
+		const files = await Promise.all(
+			entries.map((entry) => filesFromEntry(entry)),
+		);
+		return files.flat();
+	}
+
+	return Array.from(dataTransfer.files, (file) => ({ file }));
+}
+
+function selectedFiles(): UploadFile[] {
+	if (droppedFiles) {
+		return droppedFiles;
+	}
+
+	return fileInput?.files
+		? Array.from(fileInput.files, (file) => ({ file }))
+		: [];
+}
+
+function setDragActive(active: boolean): void {
+	if (form) {
+		form.dataset.dragActive = active ? "true" : "false";
+	}
+}
 
 function setPublishState(state: "invalid" | "ready" | "uploading"): void {
 	if (form) {
@@ -192,17 +317,12 @@ function updateSelectionSummary(): PreparedUpload | null {
 		return null;
 	}
 
-	if (!fileInput.files) {
-		showClientValidation("Choose a directory containing index.html.");
-		selectionSummary.textContent = "No publish request is ready.";
-		setPublishState("invalid");
-		return null;
-	}
-
-	const prepared = prepareUpload(fileInput.files);
+	const prepared = prepareUpload(selectedFiles());
 	if (typeof prepared === "string") {
 		showClientValidation(prepared);
-		selectionSummary.textContent = "No publish request is ready.";
+		if (selectionSummary) {
+			selectionSummary.textContent = "No publish request is ready.";
+		}
 		setPublishState("invalid");
 		return null;
 	}
@@ -214,7 +334,60 @@ function updateSelectionSummary(): PreparedUpload | null {
 }
 
 fileInput?.addEventListener("change", () => {
+	droppedFiles = null;
 	updateSelectionSummary();
+});
+
+form?.addEventListener("dragenter", (event) => {
+	if (form.dataset.publishState === "uploading") {
+		return;
+	}
+
+	event.preventDefault();
+	dragDepth += 1;
+	setDragActive(true);
+});
+
+form?.addEventListener("dragover", (event) => {
+	if (form.dataset.publishState === "uploading") {
+		return;
+	}
+
+	event.preventDefault();
+	if (event.dataTransfer) {
+		event.dataTransfer.dropEffect = "copy";
+	}
+});
+
+form?.addEventListener("dragleave", (event) => {
+	event.preventDefault();
+	dragDepth = Math.max(0, dragDepth - 1);
+	if (dragDepth === 0) {
+		setDragActive(false);
+	}
+});
+
+form?.addEventListener("drop", async (event) => {
+	event.preventDefault();
+	dragDepth = 0;
+	setDragActive(false);
+	if (!event.dataTransfer || form.dataset.publishState === "uploading") {
+		return;
+	}
+
+	try {
+		droppedFiles = await filesFromDrop(event.dataTransfer);
+		updateSelectionSummary();
+	} catch {
+		droppedFiles = null;
+		showClientValidation(
+			"The dropped folder could not be read. Choose the directory instead.",
+		);
+		if (selectionSummary) {
+			selectionSummary.textContent = "No publish request is ready.";
+		}
+		setPublishState("invalid");
+	}
 });
 
 form?.addEventListener("htmx:configRequest", (event) => {

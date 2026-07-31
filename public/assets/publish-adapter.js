@@ -2,6 +2,10 @@ import { selectedRelativePaths, setHtmxMultipartParameters, } from "./publish-up
 const maxFiles = 100;
 const maxFileBytes = 10 * 1024 * 1024;
 const maxTotalBytes = 50 * 1024 * 1024;
+function droppedEntry(item) {
+    const candidate = item;
+    return candidate.webkitGetAsEntry?.call(item) ?? null;
+}
 function hasControlCharacter(value) {
     for (const character of value) {
         const codePoint = character.codePointAt(0);
@@ -27,15 +31,19 @@ function isSafeRelativePath(path) {
         path === "sites" ||
         path.startsWith("sites/"));
 }
-function prepareUpload(files) {
-    const selectedFiles = Array.from(files);
+function prepareUpload(selectedFiles) {
     if (selectedFiles.length === 0) {
         return "Choose a directory containing index.html.";
     }
     if (selectedFiles.length > maxFiles) {
         return "A publish can contain at most 100 files.";
     }
-    const relativePaths = selectedRelativePaths(selectedFiles);
+    const relativePaths = selectedRelativePaths(selectedFiles.map(({ file, relativePath }) => ({
+        name: file.name,
+        size: file.size,
+        webkitRelativePath: file.webkitRelativePath,
+        relativePath,
+    })));
     if ("error" in relativePaths) {
         return relativePaths.error;
     }
@@ -50,7 +58,7 @@ function prepareUpload(files) {
         return "Each selected file must have a unique relative path.";
     }
     let totalBytes = 0;
-    for (const file of selectedFiles) {
+    for (const { file } of selectedFiles) {
         if (file.size > maxFileBytes) {
             return `${file.name} is larger than 10 MiB.`;
         }
@@ -65,7 +73,7 @@ function prepareUpload(files) {
         path,
     }));
     formData.set("files", JSON.stringify(parts));
-    for (const [index, file] of selectedFiles.entries()) {
+    for (const [index, { file }] of selectedFiles.entries()) {
         formData.set(`file-${index}`, file, file.name);
     }
     return { formData, fileCount: selectedFiles.length, totalBytes };
@@ -102,6 +110,63 @@ const clientValidation = document.querySelector("#publish-client-validation");
 const selectionSummary = document.querySelector("#selection-summary");
 const progress = document.querySelector("#publish-progress");
 const progressStatus = document.querySelector("#publish-progress-status");
+let droppedFiles = null;
+let dragDepth = 0;
+function fileFromEntry(entry) {
+    return new Promise((resolve, reject) => {
+        entry.file(resolve, reject);
+    });
+}
+function entriesFromReader(reader) {
+    return new Promise((resolve, reject) => {
+        const entries = [];
+        const readBatch = () => {
+            reader.readEntries((batch) => {
+                if (batch.length === 0) {
+                    resolve(entries);
+                    return;
+                }
+                entries.push(...batch);
+                readBatch();
+            }, reject);
+        };
+        readBatch();
+    });
+}
+async function filesFromEntry(entry, parentPath = "") {
+    const relativePath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+    if (entry.isFile) {
+        return [{ file: await fileFromEntry(entry), relativePath }];
+    }
+    const children = await entriesFromReader(entry.createReader());
+    const nestedFiles = await Promise.all(children.map((child) => filesFromEntry(child, relativePath)));
+    return nestedFiles.flat();
+}
+async function filesFromDrop(dataTransfer) {
+    const items = Array.from(dataTransfer.items);
+    const entries = items
+        .filter((item) => item.kind === "file")
+        .map(droppedEntry)
+        .filter((entry) => entry !== null && entry !== undefined);
+    if (entries.length > 0) {
+        const files = await Promise.all(entries.map((entry) => filesFromEntry(entry)));
+        return files.flat();
+    }
+    return Array.from(dataTransfer.files, (file) => ({ file }));
+}
+function selectedFiles() {
+    if (droppedFiles) {
+        return droppedFiles;
+    }
+    return fileInput?.files
+        ? Array.from(fileInput.files, (file) => ({ file }))
+        : [];
+}
+function setDragActive(active) {
+    if (form) {
+        form.dataset.dragActive = active ? "true" : "false";
+    }
+}
 function setPublishState(state) {
     if (form) {
         form.dataset.publishState = state;
@@ -121,16 +186,12 @@ function updateSelectionSummary() {
     if (!fileInput || !selectionSummary) {
         return null;
     }
-    if (!fileInput.files) {
-        showClientValidation("Choose a directory containing index.html.");
-        selectionSummary.textContent = "No publish request is ready.";
-        setPublishState("invalid");
-        return null;
-    }
-    const prepared = prepareUpload(fileInput.files);
+    const prepared = prepareUpload(selectedFiles());
     if (typeof prepared === "string") {
         showClientValidation(prepared);
-        selectionSummary.textContent = "No publish request is ready.";
+        if (selectionSummary) {
+            selectionSummary.textContent = "No publish request is ready.";
+        }
         setPublishState("invalid");
         return null;
     }
@@ -140,7 +201,52 @@ function updateSelectionSummary() {
     return prepared;
 }
 fileInput?.addEventListener("change", () => {
+    droppedFiles = null;
     updateSelectionSummary();
+});
+form?.addEventListener("dragenter", (event) => {
+    if (form.dataset.publishState === "uploading") {
+        return;
+    }
+    event.preventDefault();
+    dragDepth += 1;
+    setDragActive(true);
+});
+form?.addEventListener("dragover", (event) => {
+    if (form.dataset.publishState === "uploading") {
+        return;
+    }
+    event.preventDefault();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+    }
+});
+form?.addEventListener("dragleave", (event) => {
+    event.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) {
+        setDragActive(false);
+    }
+});
+form?.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    dragDepth = 0;
+    setDragActive(false);
+    if (!event.dataTransfer || form.dataset.publishState === "uploading") {
+        return;
+    }
+    try {
+        droppedFiles = await filesFromDrop(event.dataTransfer);
+        updateSelectionSummary();
+    }
+    catch {
+        droppedFiles = null;
+        showClientValidation("The dropped folder could not be read. Choose the directory instead.");
+        if (selectionSummary) {
+            selectionSummary.textContent = "No publish request is ready.";
+        }
+        setPublishState("invalid");
+    }
 });
 form?.addEventListener("htmx:configRequest", (event) => {
     if (!(event instanceof CustomEvent)) {
