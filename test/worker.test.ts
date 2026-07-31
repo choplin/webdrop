@@ -188,6 +188,9 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(document).toContain(
 			"Files stay private until publishing is complete.",
 		);
+		expect(document).toContain(
+			'<img class="brand-mark" src="/assets/logo.png" alt="">',
+		);
 		expect(document).toContain('src="/assets/htmx.min.js"');
 		expect(document).toContain("webkitdirectory");
 		expect(document).toContain('hx-post="/publish"');
@@ -216,17 +219,22 @@ describe("Webdrop M1.1 host dispatch", () => {
 		}
 	});
 
-	it("serves htmx and generated UI assets from the control origin", async () => {
-		const [htmx, adapter, uploadHelper, styles] = await Promise.all([
-			exports.default.fetch(`${controlOrigin}/assets/htmx.min.js`),
-			exports.default.fetch(`${controlOrigin}/assets/publish-adapter.js`),
-			exports.default.fetch(`${controlOrigin}/assets/publish-upload.js`),
-			exports.default.fetch(`${controlOrigin}/assets/app.css`),
-		]);
+	it("serves generated UI assets and the logo from the control origin", async () => {
+		const [htmx, adapter, uploadHelper, styles, logo, pagesLogo] =
+			await Promise.all([
+				exports.default.fetch(`${controlOrigin}/assets/htmx.min.js`),
+				exports.default.fetch(`${controlOrigin}/assets/publish-adapter.js`),
+				exports.default.fetch(`${controlOrigin}/assets/publish-upload.js`),
+				exports.default.fetch(`${controlOrigin}/assets/app.css`),
+				exports.default.fetch(`${controlOrigin}/assets/logo.png`),
+				pageFetch("/assets/logo.png"),
+			]);
 
-		for (const response of [htmx, adapter, uploadHelper, styles]) {
+		for (const response of [htmx, adapter, uploadHelper, styles, logo]) {
 			expect(response.status).toBe(200);
 		}
+		expect(logo.headers.get("Content-Type")).toBe("image/png");
+		expect(pagesLogo.status).toBe(404);
 		expect(await htmx.text()).toContain("htmx");
 		const adapterSource = await adapter.text();
 		expect(adapterSource).toContain("./publish-upload.js");
@@ -239,8 +247,6 @@ describe("Webdrop M1.1 host dispatch", () => {
 			"alert",
 			"alert-error",
 			"alert-success",
-			"badge",
-			"badge-primary",
 			"btn",
 			"btn-primary",
 			"card",

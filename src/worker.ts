@@ -12,7 +12,7 @@ const controlDocument = `<!doctype html>
 	<div class="control-layout">
 		<header class="control-nav" aria-label="Webdrop">
 			<div class="control-brand">
-				<span class="badge badge-primary brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="M8 2.5v8M4.5 7.5 8 11l3.5-3.5M3 13.5h10" /></svg></span>
+				<img class="brand-mark" src="/assets/logo.png" alt="">
 				<span class="brand-wordmark">webdrop</span>
 			</div>
 		</header>

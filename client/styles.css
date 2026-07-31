@@ -44,28 +44,6 @@
 		gap: 0.5625rem;
 	}
 
-	.brand-mark {
-		inline-size: 1.625rem;
-		min-inline-size: 1.625rem;
-		block-size: 1.625rem;
-		min-block-size: 1.625rem;
-		padding: 0;
-		border: 0;
-		border-radius: 0.4375rem;
-		background: #1a1a1a;
-		color: #fff;
-	}
-
-	.brand-mark svg {
-		inline-size: 0.9375rem;
-		block-size: 0.9375rem;
-		fill: none;
-		stroke: currentcolor;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-		stroke-width: 1.5;
-	}
-
 	.brand-wordmark {
 		font-size: 0.9375rem;
 		letter-spacing: -0.02em;
@@ -361,15 +339,11 @@
 
 /* Keep the product-specific visual treatment above daisyUI component defaults. */
 .brand-mark {
-	inline-size: 1.625rem;
-	min-inline-size: 1.625rem;
-	block-size: 1.625rem;
-	min-block-size: 1.625rem;
-	padding: 0;
-	border: 0;
-	border-radius: 0.4375rem;
-	background-color: #1a1a1a;
-	color: #fff;
+	inline-size: 26px;
+	block-size: 26px;
+	flex: 0 0 26px;
+	object-fit: contain;
+	display: block;
 }
 
 .publish-card {
