@@ -4,6 +4,7 @@
 		"includes": [
 			"**",
 			"!**/.agents",
+			"!client/webdrop-design.html",
 			"!node_modules",
 			"!.wrangler",
 			"!coverage",
