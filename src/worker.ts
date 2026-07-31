@@ -9,39 +9,52 @@ const controlDocument = `<!doctype html>
 	<script type="module" src="/assets/publish-adapter.js"></script>
 </head>
 <body class="control-page">
-	<main class="control-layout">
-		<header class="control-heading">
-			<span class="badge badge-primary">Webdrop</span>
-			<h1>Publish a static site</h1>
-			<p>Select a directory. It is published only after every file has reached storage.</p>
-		</header>
-		<section class="card publish-card" aria-labelledby="publish-heading">
-			<div class="card-body">
-				<h2 id="publish-heading" class="card-title">New publication</h2>
-				<form id="publish-form" class="publish-form" method="post" action="/publish" enctype="multipart/form-data" hx-post="/publish" hx-target="#publish-result" hx-swap="outerHTML" hx-encoding="multipart/form-data" hx-disabled-elt="#publish-submit">
-					<div class="publish-field">
-						<label class="field-label" for="site-files">Site directory</label>
-						<input id="site-files" class="file-input" type="file" name="site-files" webkitdirectory multiple required aria-describedby="site-files-help selection-summary publish-client-validation">
-						<p id="site-files-help" class="field-help">Use a directory whose root contains index.html.</p>
-						<p id="selection-summary" class="field-help" aria-live="polite">No directory selected.</p>
-						<p id="publish-client-validation" class="alert alert-error" role="alert" hidden></p>
-					</div>
-					<div class="publish-progress">
-						<label class="field-label" for="publish-progress">Upload progress</label>
-						<progress id="publish-progress" class="progress progress-primary" value="0" max="100">0%</progress>
-						<p id="publish-progress-status" class="field-help" aria-live="polite">Waiting to upload.</p>
-					</div>
-					<ul class="publish-limit-list field-help" aria-label="Publish limits">
-						<li>100 files maximum</li>
-						<li>10 MiB maximum per file</li>
-						<li>50 MiB maximum in total</li>
-					</ul>
-					<div class="publish-actions"><button id="publish-submit" class="btn btn-primary" type="submit">Publish site</button></div>
-				</form>
-				<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"></section>
+	<div class="control-layout">
+		<header class="control-nav" aria-label="Webdrop">
+			<div class="control-brand">
+				<span class="badge badge-primary brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="M8 2.5v8M4.5 7.5 8 11l3.5-3.5M3 13.5h10" /></svg></span>
+				<span class="brand-wordmark">webdrop</span>
 			</div>
-		</section>
-	</main>
+		</header>
+		<main class="publish-main">
+			<section class="publish-focus" aria-labelledby="publish-page-title">
+				<header class="publish-introduction">
+					<h1 id="publish-page-title">Put your site online.</h1>
+					<p>Choose a folder with <code>index.html</code>. Get a shareable URL when every file is published.</p>
+				</header>
+				<section class="card publish-card" aria-labelledby="publish-heading">
+					<div class="card-body publish-card-body">
+						<form id="publish-form" class="publish-form" method="post" action="/publish" enctype="multipart/form-data" hx-post="/publish" hx-target="#publish-result" hx-swap="outerHTML" hx-encoding="multipart/form-data" hx-disabled-elt="#publish-submit">
+							<input id="site-files" class="file-input publish-file-input" type="file" name="site-files" webkitdirectory multiple required aria-describedby="site-files-help selection-summary publish-client-validation">
+							<div class="publish-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" /><path d="M12 16V10m-2.5 2.5L12 10l2.5 2.5" /></svg></div>
+							<div class="publish-copy">
+								<h2 id="publish-heading" class="card-title">Choose a folder to publish</h2>
+								<p id="site-files-help" class="field-help">Its root must contain <code>index.html</code>.</p>
+							</div>
+							<div class="publish-picker-actions">
+								<label class="btn btn-primary publish-picker" for="site-files"><span>Choose directory</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></label>
+								<button id="publish-submit" class="btn btn-primary publish-submit" type="submit"><span>Publish site</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></button>
+							</div>
+							<div class="publish-selection">
+								<p id="selection-summary" class="field-help" aria-live="polite">No directory selected.</p>
+								<p id="publish-client-validation" class="alert alert-error" role="alert" hidden></p>
+							</div>
+							<div class="publish-progress" aria-live="polite">
+								<label class="field-label" for="publish-progress">Upload progress</label>
+								<progress id="publish-progress" class="progress progress-primary" value="0" max="100">0%</progress>
+								<p id="publish-progress-status" class="field-help">Waiting to upload.</p>
+							</div>
+						</form>
+					</div>
+				</section>
+				<div class="publish-metadata">
+					<p class="publish-safety"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3.5" y="7" width="9" height="6.5" rx="1" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>Files stay private until publishing is complete.</p>
+					<ul class="publish-limit-list" aria-label="Publish limits"><li>100 files</li><li>10 MiB / file</li><li>50 MiB total</li></ul>
+				</div>
+				<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"></section>
+			</section>
+		</main>
+	</div>
 </body>
 </html>`;
 

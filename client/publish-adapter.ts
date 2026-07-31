@@ -168,6 +168,12 @@ const progressStatus = document.querySelector<HTMLElement>(
 	"#publish-progress-status",
 );
 
+function setPublishState(state: "invalid" | "ready" | "uploading"): void {
+	if (form) {
+		form.dataset.publishState = state;
+	}
+}
+
 function showClientValidation(message: string | null): void {
 	if (!clientValidation) {
 		return;
@@ -185,6 +191,7 @@ function updateSelectionSummary(): PreparedUpload | null {
 	if (!fileInput.files) {
 		showClientValidation("Choose a directory containing index.html.");
 		selectionSummary.textContent = "No publish request is ready.";
+		setPublishState("invalid");
 		return null;
 	}
 
@@ -192,11 +199,13 @@ function updateSelectionSummary(): PreparedUpload | null {
 	if (typeof prepared === "string") {
 		showClientValidation(prepared);
 		selectionSummary.textContent = "No publish request is ready.";
+		setPublishState("invalid");
 		return null;
 	}
 
 	showClientValidation(null);
 	selectionSummary.textContent = `${prepared.fileCount} files, ${formatBytes(prepared.totalBytes)} ready to publish.`;
+	setPublishState("ready");
 	return prepared;
 }
 
@@ -225,6 +234,7 @@ form?.addEventListener("htmx:configRequest", (event) => {
 
 form?.addEventListener("htmx:beforeRequest", () => {
 	form.setAttribute("aria-busy", "true");
+	setPublishState("uploading");
 	if (progress) {
 		progress.value = 0;
 	}
@@ -257,6 +267,7 @@ form?.addEventListener("htmx:xhr:progress", (event) => {
 
 form?.addEventListener("htmx:afterRequest", () => {
 	form.removeAttribute("aria-busy");
+	setPublishState("ready");
 });
 
 form?.addEventListener("htmx:beforeSwap", (event) => {

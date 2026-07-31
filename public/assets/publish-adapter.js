@@ -102,6 +102,11 @@ const clientValidation = document.querySelector("#publish-client-validation");
 const selectionSummary = document.querySelector("#selection-summary");
 const progress = document.querySelector("#publish-progress");
 const progressStatus = document.querySelector("#publish-progress-status");
+function setPublishState(state) {
+    if (form) {
+        form.dataset.publishState = state;
+    }
+}
 function showClientValidation(message) {
     if (!clientValidation) {
         return;
@@ -116,16 +121,19 @@ function updateSelectionSummary() {
     if (!fileInput.files) {
         showClientValidation("Choose a directory containing index.html.");
         selectionSummary.textContent = "No publish request is ready.";
+        setPublishState("invalid");
         return null;
     }
     const prepared = prepareUpload(fileInput.files);
     if (typeof prepared === "string") {
         showClientValidation(prepared);
         selectionSummary.textContent = "No publish request is ready.";
+        setPublishState("invalid");
         return null;
     }
     showClientValidation(null);
     selectionSummary.textContent = `${prepared.fileCount} files, ${formatBytes(prepared.totalBytes)} ready to publish.`;
+    setPublishState("ready");
     return prepared;
 }
 fileInput?.addEventListener("change", () => {
@@ -147,6 +155,7 @@ form?.addEventListener("htmx:configRequest", (event) => {
 });
 form?.addEventListener("htmx:beforeRequest", () => {
     form.setAttribute("aria-busy", "true");
+    setPublishState("uploading");
     if (progress) {
         progress.value = 0;
     }
@@ -171,6 +180,7 @@ form?.addEventListener("htmx:xhr:progress", (event) => {
 });
 form?.addEventListener("htmx:afterRequest", () => {
     form.removeAttribute("aria-busy");
+    setPublishState("ready");
 });
 form?.addEventListener("htmx:beforeSwap", (event) => {
     if (!(event instanceof CustomEvent) ||

@@ -144,7 +144,12 @@ describe("Webdrop M1.1 host dispatch", () => {
 			"text/html; charset=utf-8",
 		);
 		const document = await response.text();
-		expect(document).toContain("Publish a static site");
+		expect(document).toContain("Put your site online.");
+		expect(document).toContain("Choose a folder to publish");
+		expect(document).toContain('<label class="btn btn-primary publish-picker"');
+		expect(document).toContain(
+			"Files stay private until publishing is complete.",
+		);
 		expect(document).toContain('src="/assets/htmx.min.js"');
 		expect(document).toContain("webkitdirectory");
 		expect(document).toContain('hx-post="/publish"');
