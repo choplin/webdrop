@@ -1,0 +1,7 @@
+[devshell]
+name = "webdrop"
+
+packages = [
+  "nodejs_24",
+  "pnpm",
+]
