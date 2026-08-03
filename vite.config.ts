@@ -40,7 +40,7 @@ export default defineConfig(({ command }) => ({
 			},
 		},
 		basicSsl({
-			domains: ["localhost", "control.localhost", "pages.localhost"],
+			domains: ["localhost", "pages.localhost"],
 		}),
 		tailwindcss(),
 		cloudflare(
@@ -48,7 +48,7 @@ export default defineConfig(({ command }) => ({
 				? {
 						config: {
 							vars: {
-								CONTROL_HOSTNAME: "control.localhost",
+								CONTROL_HOSTNAME: "localhost",
 								PAGES_HOSTNAME: "pages.localhost",
 							},
 						},
