@@ -8,7 +8,7 @@ so the control plane can link to the local pages plane:
 
 ```sh
 pnpm build:assets
-pnpm exec wrangler dev --local --local-protocol https --var CONTROL_HOSTNAME:control.localhost --var PAGES_HOSTNAME:pages.localhost
+pnpm dev
 ```
 
 Open `https://control.localhost:8787` (accept Wrangler's local development
