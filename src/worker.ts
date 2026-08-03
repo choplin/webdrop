@@ -1,63 +1,3 @@
-const controlDocument = `<!doctype html>
-<html lang="en">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Webdrop</title>
-	<link rel="stylesheet" href="/assets/app.css">
-	<script src="/assets/htmx.min.js" defer></script>
-	<script type="module" src="/assets/publish-adapter.js"></script>
-</head>
-<body class="control-page">
-	<div class="control-layout">
-		<header class="control-nav" aria-label="Webdrop">
-			<div class="control-brand">
-				<img class="brand-mark" src="/assets/logo.png" alt="">
-				<span class="brand-wordmark">webdrop</span>
-			</div>
-		</header>
-		<main class="publish-main">
-			<section class="publish-focus" aria-labelledby="publish-page-title">
-				<header class="publish-introduction">
-					<h1 id="publish-page-title">Put your site online.</h1>
-					<p>Publish a single HTML file or a folder with <code>index.html</code>. Get a shareable URL when every file is online.</p>
-				</header>
-				<section class="card publish-card" aria-labelledby="publish-heading">
-					<div class="card-body publish-card-body">
-						<form id="publish-form" class="publish-form" method="post" action="/publish" enctype="multipart/form-data" hx-post="/publish" hx-target="#publish-result" hx-swap="outerHTML" hx-encoding="multipart/form-data" hx-disabled-elt="#publish-submit">
-							<input id="site-files" class="file-input publish-file-input" type="file" name="site-files" webkitdirectory multiple aria-required="true" aria-describedby="site-files-help selection-summary publish-client-validation">
-							<div class="publish-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" /><path d="M12 16V10m-2.5 2.5L12 10l2.5 2.5" /></svg></div>
-							<div class="publish-copy">
-								<h2 id="publish-heading" class="card-title">Drop an HTML file or folder</h2>
-								<p id="site-files-help" class="field-help">Folders must contain <code>index.html</code> at their root.</p>
-							</div>
-							<div class="publish-picker-actions">
-								<label class="btn btn-primary publish-picker" for="site-files"><span>Choose folder</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></label>
-								<button id="publish-submit" class="btn btn-primary publish-submit" type="submit"><span>Publish site</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></button>
-							</div>
-							<div class="publish-selection">
-								<p id="selection-summary" class="field-help" aria-live="polite">No file or folder selected.</p>
-								<p id="publish-client-validation" class="alert alert-error" role="alert" hidden></p>
-							</div>
-							<div class="publish-progress" aria-live="polite">
-								<label class="field-label" for="publish-progress">Upload progress</label>
-								<progress id="publish-progress" class="progress progress-primary" value="0" max="100">0%</progress>
-								<p id="publish-progress-status" class="field-help">Waiting to upload.</p>
-							</div>
-						</form>
-					</div>
-				</section>
-				<div class="publish-metadata">
-					<p class="publish-safety"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="3.5" y="7" width="9" height="6.5" rx="1" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>Files stay private until publishing is complete.</p>
-					<div class="publish-limits"><span id="upload-limits-label" class="publish-limit-label">Upload limits</span><ul class="publish-limit-list" aria-labelledby="upload-limits-label"><li>100 files</li><li>10 MiB / file</li><li>50 MiB total</li></ul></div>
-				</div>
-				<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"></section>
-			</section>
-		</main>
-	</div>
-</body>
-</html>`;
-
 const maxFiles = 100;
 const maxFileBytes = 10 * 1024 * 1024;
 const maxTotalBytes = 50 * 1024 * 1024;
@@ -145,6 +85,26 @@ interface PublishedSite {
 
 function notFound(): Response {
 	return new Response("Not found", { status: 404 });
+}
+
+async function controlPage(
+	request: Request,
+	assets: Fetcher,
+): Promise<Response> {
+	const assetUrl = new URL(request.url);
+	assetUrl.pathname = "/client/";
+	const assetResponse = await assets.fetch(new Request(assetUrl, request));
+	const headers = new Headers(assetResponse.headers);
+
+	for (const [name, value] of Object.entries(controlHtmlHeaders)) {
+		headers.set(name, value);
+	}
+
+	return new Response(assetResponse.body, {
+		status: assetResponse.status,
+		statusText: assetResponse.statusText,
+		headers,
+	});
 }
 
 function pagesNotFound(): Response {
@@ -582,7 +542,13 @@ async function handleControl(request: Request, env: Env): Promise<Response> {
 		return handleControlPublish(request, env);
 	}
 
-	if (request.method === "GET" && url.pathname.startsWith("/assets/")) {
+	if (
+		request.method === "GET" &&
+		(url.pathname.startsWith("/assets/") ||
+			url.pathname === "/@vite/client" ||
+			url.pathname.startsWith("/node_modules/.vite/") ||
+			/^\/client\/[^/]+\.(?:css|png|ts)$/.test(url.pathname))
+	) {
 		return env.ASSETS.fetch(request);
 	}
 
@@ -590,7 +556,7 @@ async function handleControl(request: Request, env: Env): Promise<Response> {
 		return notFound();
 	}
 
-	return new Response(controlDocument, { headers: controlHtmlHeaders });
+	return controlPage(request, env.ASSETS);
 }
 
 async function handlePages(request: Request, env: Env): Promise<Response> {

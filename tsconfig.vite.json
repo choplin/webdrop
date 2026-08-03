@@ -1,14 +1,13 @@
 {
 	"compilerOptions": {
-		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"allowImportingTsExtensions": true,
 		"module": "ESNext",
 		"moduleResolution": "Bundler",
 		"noEmit": true,
 		"skipLibCheck": true,
 		"strict": true,
 		"target": "ES2022",
-		"types": ["vite/client"],
-		"verbatimModuleSyntax": true
+		"types": ["node", "vite/client"]
 	},
-	"include": ["client/**/*.ts"]
+	"include": ["vite.config.ts"]
 }

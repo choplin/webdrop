@@ -185,16 +185,17 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(document).toContain("Put your site online.");
 		expect(document).toContain("Drop an HTML file or folder");
 		expect(document).toContain("Upload limits");
-		expect(document).toContain('<label class="btn btn-primary publish-picker"');
+		expect(document).toContain('for="site-file"><span>Choose HTML file</span>');
+		expect(document).toContain('for="site-folder"><span>Choose folder</span>');
+		expect(document).toContain('accept=".html,.htm,text/html"');
 		expect(document).toContain(
 			"Files stay private until publishing is complete.",
 		);
-		expect(document).toContain(
-			'<img class="brand-mark" src="/assets/logo.png" alt="">',
-		);
-		expect(document).toContain('src="/assets/htmx.min.js"');
+		expect(document).toContain('class="brand-mark"');
+		expect(document).toContain('src="/assets/logo.png"');
+		expect(document).toContain('src="/assets/app.js"');
 		expect(document).toContain("webkitdirectory");
-		expect(document).toContain('aria-required="true"');
+		expect(document).toContain("publish-client-validation");
 		expect(document).toContain('hx-post="/publish"');
 	});
 
@@ -222,28 +223,21 @@ describe("Webdrop M1.1 host dispatch", () => {
 	});
 
 	it("serves generated UI assets and the logo from the control origin", async () => {
-		const [htmx, adapter, uploadHelper, styles, logo, pagesLogo] =
-			await Promise.all([
-				exports.default.fetch(`${controlOrigin}/assets/htmx.min.js`),
-				exports.default.fetch(`${controlOrigin}/assets/publish-adapter.js`),
-				exports.default.fetch(`${controlOrigin}/assets/publish-upload.js`),
-				exports.default.fetch(`${controlOrigin}/assets/app.css`),
-				exports.default.fetch(`${controlOrigin}/assets/logo.png`),
-				pageFetch("/assets/logo.png"),
-			]);
+		const [app, styles, logo, pagesLogo] = await Promise.all([
+			exports.default.fetch(`${controlOrigin}/assets/app.js`),
+			exports.default.fetch(`${controlOrigin}/assets/app.css`),
+			exports.default.fetch(`${controlOrigin}/assets/logo.png`),
+			pageFetch("/assets/logo.png"),
+		]);
 
-		for (const response of [htmx, adapter, uploadHelper, styles, logo]) {
+		for (const response of [app, styles, logo]) {
 			expect(response.status).toBe(200);
 		}
 		expect(logo.headers.get("Content-Type")).toBe("image/png");
 		expect(pagesLogo.status).toBe(404);
-		expect(await htmx.text()).toContain("htmx");
-		const adapterSource = await adapter.text();
-		expect(adapterSource).toContain("./publish-upload.js");
-		expect(adapterSource).toContain(
-			'fileInput.disabled = state === "uploading"',
-		);
-		expect(await uploadHelper.text()).toContain("setHtmxMultipartParameters");
+		const appSource = await app.text();
+		expect(appSource).toContain("htmx");
+		expect(appSource).toContain("setHtmxMultipartParameters");
 		const css = await styles.text();
 		for (const componentClass of [
 			"alert",
@@ -294,7 +288,7 @@ describe("Webdrop M1.1 host dispatch", () => {
 				"display:grid",
 			],
 			[
-				".publish-file-input:focus-visible~.publish-picker-actions .publish-picker",
+				"#site-file:focus-visible~.publish-picker-actions .publish-file-picker,#site-folder:focus-visible~.publish-picker-actions .publish-folder-picker",
 				"outline:3px solid #0066ff47",
 			],
 		] as const) {

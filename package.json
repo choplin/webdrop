@@ -3,30 +3,31 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
-	"packageManager": "pnpm@11.17.0",
+	"packageManager": "pnpm@11.15.0",
 	"scripts": {
-		"build:assets": "tsc --project tsconfig.browser.json && mkdir -p public/assets && tailwindcss --input client/styles.css --output public/assets/app.css --minify && cp node_modules/htmx.org/dist/htmx.min.js public/assets/htmx.min.js && cp client/logo.png public/assets/logo.png",
-		"build:client": "tsc --project tsconfig.browser.json",
-		"build:styles": "mkdir -p public/assets && tailwindcss --input client/styles.css --output public/assets/app.css --minify",
-		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit",
-		"copy:htmx": "mkdir -p public/assets && cp node_modules/htmx.org/dist/htmx.min.js public/assets/htmx.min.js",
-		"dev": "wrangler dev --local --local-protocol https --var CONTROL_HOSTNAME:control.localhost --var PAGES_HOSTNAME:pages.localhost",
+		"build": "vite build",
+		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit",
+		"dev": "vite dev",
 		"format": "biome format --write .",
 		"generate:types": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
-		"test": "mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
-		"typecheck": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit"
+		"preview": "vite preview",
+		"test": "pnpm build && mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
+		"typecheck": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",
+		"@cloudflare/vite-plugin": "1.50.0",
 		"@cloudflare/vitest-pool-workers": "0.18.8",
-		"@cloudflare/workers-types": "5.20260726.1",
-		"@tailwindcss/cli": "4.3.3",
+		"@cloudflare/workers-types": "5.20260801.1",
+		"@tailwindcss/vite": "4.3.3",
 		"@types/node": "26.1.1",
+		"@vitejs/plugin-basic-ssl": "2.3.0",
 		"daisyui": "5.7.4",
 		"htmx.org": "2.0.10",
 		"tailwindcss": "4.3.3",
 		"typescript": "7.0.2",
+		"vite": "8.2.0",
 		"vitest": "4.1.10",
-		"wrangler": "4.114.0"
+		"wrangler": "4.118.0"
 	}
 }

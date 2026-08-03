@@ -165,8 +165,11 @@
 	}
 
 	.publish-picker-actions {
-		display: grid;
-		justify-items: center;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.625rem;
 	}
 
 	.publish-picker,
@@ -400,6 +403,17 @@
 	background-color: #0057d9;
 }
 
+.publish-folder-picker {
+	border: 1px solid #c8d8f4;
+	background-color: #fff;
+	color: #064eb8;
+}
+
+.publish-folder-picker:hover {
+	border-color: #9ab8eb;
+	background-color: #f2f6ff;
+}
+
 /* These state rules are deliberately unlayered so they outrank daisyUI's utilities. */
 .publish-submit,
 .publish-selection,
@@ -448,7 +462,8 @@
 	transform: translateY(-0.125rem);
 }
 
-.publish-file-input:focus-visible ~ .publish-picker-actions .publish-picker {
+#site-file:focus-visible ~ .publish-picker-actions .publish-file-picker,
+#site-folder:focus-visible ~ .publish-picker-actions .publish-folder-picker {
 	outline: 3px solid rgb(0 102 255 / 0.28);
 	outline-offset: 3px;
 }

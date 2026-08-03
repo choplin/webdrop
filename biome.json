@@ -5,10 +5,14 @@
 			"**",
 			"!**/.agents",
 			"!client/webdrop-design.html",
+			"!.direnv",
 			"!node_modules",
+			"!.pnpm-store",
 			"!.wrangler",
+			"!.wtm",
 			"!coverage",
-			"!public/assets",
+			"!dist",
+			"!target",
 			"!types/generated/worker-configuration.d.ts"
 		]
 	},

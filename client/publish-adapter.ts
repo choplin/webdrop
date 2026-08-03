@@ -108,7 +108,7 @@ function isSafeRelativePath(path: string): boolean {
 
 function prepareUpload(selectedFiles: UploadFile[]): PreparedUpload | string {
 	if (selectedFiles.length === 0) {
-		return "Drop an HTML file or choose a folder containing index.html.";
+		return "Choose an HTML file or a folder containing index.html.";
 	}
 
 	if (selectedFiles.length > maxFiles) {
@@ -200,7 +200,8 @@ function formatBytes(bytes: number): string {
 }
 
 const form = document.querySelector<HTMLFormElement>("#publish-form");
-const fileInput = document.querySelector<HTMLInputElement>("#site-files");
+const htmlFileInput = document.querySelector<HTMLInputElement>("#site-file");
+const folderInput = document.querySelector<HTMLInputElement>("#site-folder");
 const clientValidation = document.querySelector<HTMLElement>(
 	"#publish-client-validation",
 );
@@ -282,8 +283,12 @@ function selectedFiles(): UploadFile[] {
 		return droppedFiles;
 	}
 
-	return fileInput?.files
-		? Array.from(fileInput.files, (file) => ({ file }))
+	if (htmlFileInput?.files && htmlFileInput.files.length > 0) {
+		return Array.from(htmlFileInput.files, (file) => ({ file }));
+	}
+
+	return folderInput?.files
+		? Array.from(folderInput.files, (file) => ({ file }))
 		: [];
 }
 
@@ -298,8 +303,10 @@ function setPublishState(state: "invalid" | "ready" | "uploading"): void {
 		form.dataset.publishState = state;
 	}
 
-	if (fileInput) {
-		fileInput.disabled = state === "uploading";
+	for (const input of [htmlFileInput, folderInput]) {
+		if (input) {
+			input.disabled = state === "uploading";
+		}
 	}
 }
 
@@ -313,7 +320,7 @@ function showClientValidation(message: string | null): void {
 }
 
 function updateSelectionSummary(): PreparedUpload | null {
-	if (!fileInput || !selectionSummary) {
+	if (!htmlFileInput || !folderInput || !selectionSummary) {
 		return null;
 	}
 
@@ -328,13 +335,25 @@ function updateSelectionSummary(): PreparedUpload | null {
 	}
 
 	showClientValidation(null);
-	selectionSummary.textContent = `${prepared.fileCount} files, ${formatBytes(prepared.totalBytes)} ready to publish.`;
+	const fileLabel = prepared.fileCount === 1 ? "file" : "files";
+	selectionSummary.textContent = `${prepared.fileCount} ${fileLabel}, ${formatBytes(prepared.totalBytes)} ready to publish.`;
 	setPublishState("ready");
 	return prepared;
 }
 
-fileInput?.addEventListener("change", () => {
+htmlFileInput?.addEventListener("change", () => {
 	droppedFiles = null;
+	if (folderInput) {
+		folderInput.value = "";
+	}
+	updateSelectionSummary();
+});
+
+folderInput?.addEventListener("change", () => {
+	droppedFiles = null;
+	if (htmlFileInput) {
+		htmlFileInput.value = "";
+	}
 	updateSelectionSummary();
 });
 
@@ -376,12 +395,18 @@ form?.addEventListener("drop", async (event) => {
 	}
 
 	try {
+		if (htmlFileInput) {
+			htmlFileInput.value = "";
+		}
+		if (folderInput) {
+			folderInput.value = "";
+		}
 		droppedFiles = await filesFromDrop(event.dataTransfer);
 		updateSelectionSummary();
 	} catch {
 		droppedFiles = null;
 		showClientValidation(
-			"The dropped file or folder could not be read. Choose the folder instead.",
+			"The dropped file or folder could not be read. Choose an HTML file or folder instead.",
 		);
 		if (selectionSummary) {
 			selectionSummary.textContent = "No publish request is ready.";
