@@ -1,6 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { handlePages, publishSite } from "../src/worker";
+import worker, { cleanupSites, handlePages, publishSite } from "../src/worker";
 
 const controlOrigin = "https://control.example.test";
 const pagesOrigin = "https://pages.example.test";
@@ -139,6 +139,72 @@ function recordingStorage({ failFilePut = false } = {}): {
 
 function parseJson(value: string): unknown {
 	return JSON.parse(value);
+}
+
+function storedMetadata(
+	status: "active" | "uploading",
+	createdAt: string,
+	expiresAt: string,
+): string {
+	return JSON.stringify({
+		status,
+		createdAt,
+		expiresAt,
+		fileCount: 1,
+		totalBytes: 7,
+	});
+}
+
+function memoryCleanupStorage(
+	initialEntries: Iterable<readonly [string, string]>,
+	{ failMetadataDeleteOnce = false } = {},
+) {
+	const entries = new Map(initialEntries);
+	const deleteBatches: string[][] = [];
+	let shouldFailMetadataDelete = failMetadataDeleteOnce;
+
+	return {
+		entries,
+		deleteBatches,
+		async list({ prefix, limit }: { prefix: string; limit: number }) {
+			const keys = [...entries.keys()]
+				.filter((key) => key.startsWith(prefix))
+				.sort();
+			return {
+				objects: keys.slice(0, limit).map((key) => ({ key })),
+				truncated: keys.length > limit,
+			};
+		},
+		async get(key: string) {
+			const value = entries.get(key);
+			if (value === undefined) {
+				return null;
+			}
+
+			return {
+				size: new TextEncoder().encode(value).byteLength,
+				async text() {
+					return value;
+				},
+			};
+		},
+		async delete(keys: string | string[]) {
+			const batch = typeof keys === "string" ? [keys] : keys;
+			deleteBatches.push(batch);
+			if (
+				shouldFailMetadataDelete &&
+				batch.length === 1 &&
+				batch[0]?.startsWith("_meta/")
+			) {
+				shouldFailMetadataDelete = false;
+				throw new Error("simulated metadata delete failure");
+			}
+
+			for (const key of batch) {
+				entries.delete(key);
+			}
+		},
+	};
 }
 
 function closingBrace(css: string, openingBraceIndex: number): number {
@@ -835,5 +901,307 @@ describe("Webdrop M2.1 publish boundary", () => {
 			})),
 		);
 		expect(totalTooLarge.status).toBe(400);
+	});
+});
+
+describe("Webdrop M3.2 scheduled cleanup", () => {
+	const now = Date.parse("2026-08-05T12:00:00.000Z");
+
+	it("deletes expired active and abandoned uploading sites while preserving live sites", async () => {
+		const expiredId = "00000000-0000-4000-8000-000000000101";
+		const abandonedId = "00000000-0000-4000-8000-000000000102";
+		const activeId = "00000000-0000-4000-8000-000000000103";
+		const uploadingId = "00000000-0000-4000-8000-000000000104";
+		const storage = memoryCleanupStorage([
+			[
+				`_meta/${expiredId}.json`,
+				storedMetadata(
+					"active",
+					"2026-08-05T10:00:00.000Z",
+					"2026-08-05T11:00:00.000Z",
+				),
+			],
+			[`sites/${expiredId}/index.html`, "expired secret"],
+			[
+				`_meta/${abandonedId}.json`,
+				storedMetadata(
+					"uploading",
+					"2026-08-04T11:59:59.999Z",
+					"2026-08-05T12:00:00.000Z",
+				),
+			],
+			[`sites/${abandonedId}/partial.html`, "partial secret"],
+			[
+				`_meta/${activeId}.json`,
+				storedMetadata(
+					"active",
+					"2026-08-05T11:00:00.000Z",
+					"2026-08-05T13:00:00.000Z",
+				),
+			],
+			[`sites/${activeId}/index.html`, "live"],
+			[
+				`_meta/${uploadingId}.json`,
+				storedMetadata(
+					"uploading",
+					"2026-08-04T12:00:00.000Z",
+					"2026-08-05T12:00:00.001Z",
+				),
+			],
+			[`sites/${uploadingId}/partial.html`, "recent"],
+		]);
+		const logs: unknown[] = [];
+
+		const result = await cleanupSites(
+			storage,
+			() => now,
+			(entry) => logs.push(entry),
+		);
+
+		expect(result).toEqual({
+			result: "completed",
+			scannedSites: 4,
+			deletedSites: 2,
+			skippedSites: 0,
+		});
+		expect(storage.entries.has(`_meta/${expiredId}.json`)).toBe(false);
+		expect(storage.entries.has(`sites/${expiredId}/index.html`)).toBe(false);
+		expect(storage.entries.has(`_meta/${abandonedId}.json`)).toBe(false);
+		expect(storage.entries.has(`sites/${abandonedId}/partial.html`)).toBe(
+			false,
+		);
+		expect(storage.entries.has(`_meta/${activeId}.json`)).toBe(true);
+		expect(storage.entries.has(`_meta/${uploadingId}.json`)).toBe(true);
+		expect(logs).toEqual([
+			{
+				siteId: expiredId,
+				reason: "expired",
+				deletedObjects: 2,
+				result: "deleted",
+			},
+			{
+				siteId: abandonedId,
+				reason: "abandoned_upload",
+				deletedObjects: 2,
+				result: "deleted",
+			},
+		]);
+		expect(JSON.stringify(logs)).not.toContain("secret");
+	});
+
+	it("rechecks metadata immediately before deletion and skips a changed site", async () => {
+		const siteId = "00000000-0000-4000-8000-000000000105";
+		const key = `_meta/${siteId}.json`;
+		const baseStorage = memoryCleanupStorage([
+			[
+				key,
+				storedMetadata(
+					"active",
+					"2026-08-05T10:00:00.000Z",
+					"2026-08-05T11:00:00.000Z",
+				),
+			],
+			[`sites/${siteId}/index.html`, "preserved"],
+		]);
+		let metadataReads = 0;
+		const storage = {
+			list: baseStorage.list,
+			delete: baseStorage.delete,
+			async get(objectKey: string) {
+				if (objectKey === key) {
+					metadataReads += 1;
+					if (metadataReads === 2) {
+						baseStorage.entries.set(
+							key,
+							storedMetadata(
+								"active",
+								"2026-08-05T11:00:00.000Z",
+								"2026-08-05T13:00:00.000Z",
+							),
+						);
+					}
+				}
+				return baseStorage.get(objectKey);
+			},
+		};
+
+		const result = await cleanupSites(
+			storage,
+			() => now,
+			() => undefined,
+		);
+
+		expect(result).toMatchObject({ deletedSites: 0, skippedSites: 1 });
+		expect(baseStorage.entries.has(key)).toBe(true);
+		expect(baseStorage.entries.has(`sites/${siteId}/index.html`)).toBe(true);
+	});
+
+	it("treats metadata that disappears before deletion as an idempotent success", async () => {
+		const siteId = "00000000-0000-4000-8000-000000000108";
+		const key = `_meta/${siteId}.json`;
+		const baseStorage = memoryCleanupStorage([
+			[
+				key,
+				storedMetadata(
+					"active",
+					"2026-08-05T10:00:00.000Z",
+					"2026-08-05T11:00:00.000Z",
+				),
+			],
+		]);
+		let metadataReads = 0;
+		const logs: unknown[] = [];
+		const storage = {
+			list: baseStorage.list,
+			delete: baseStorage.delete,
+			async get(objectKey: string) {
+				if (objectKey === key) {
+					metadataReads += 1;
+					if (metadataReads === 2) {
+						baseStorage.entries.delete(key);
+					}
+				}
+				return baseStorage.get(objectKey);
+			},
+		};
+
+		const result = await cleanupSites(
+			storage,
+			() => now,
+			(entry) => logs.push(entry),
+		);
+
+		expect(result).toMatchObject({ deletedSites: 0, skippedSites: 1 });
+		expect(logs).toEqual([
+			{
+				siteId,
+				reason: "expired",
+				deletedObjects: 0,
+				result: "already_absent",
+			},
+		]);
+	});
+
+	it("stops without deleting when the metadata scan exceeds 1000 sites", async () => {
+		const deleteCalls: unknown[] = [];
+		const logs: unknown[] = [];
+		const storage = {
+			async list() {
+				return {
+					objects: Array.from({ length: 1000 }, (_, index) => ({
+						key: `_meta/${index}.json`,
+					})),
+					truncated: true,
+				};
+			},
+			async get() {
+				throw new Error("metadata must not be read above the scan limit");
+			},
+			async delete(keys: string | string[]) {
+				deleteCalls.push(keys);
+			},
+		};
+
+		const result = await cleanupSites(
+			storage,
+			() => now,
+			(entry) => logs.push(entry),
+		);
+
+		expect(result).toEqual({
+			result: "scan_limit_exceeded",
+			scannedSites: 1000,
+			deletedSites: 0,
+			skippedSites: 0,
+		});
+		expect(deleteCalls).toEqual([]);
+		expect(logs).toEqual([
+			{
+				reason: "scan_limit_exceeded",
+				deletedObjects: 0,
+				result: "warning",
+			},
+		]);
+	});
+
+	it("deletes site objects in batches of at most 1000 and safely resumes after interruption", async () => {
+		const siteId = "00000000-0000-4000-8000-000000000106";
+		const metadataKey = `_meta/${siteId}.json`;
+		const storage = memoryCleanupStorage(
+			[
+				[
+					metadataKey,
+					storedMetadata(
+						"active",
+						"2026-08-05T10:00:00.000Z",
+						"2026-08-05T11:00:00.000Z",
+					),
+				],
+				...Array.from(
+					{ length: 1001 },
+					(_, index) =>
+						[
+							`sites/${siteId}/${index.toString().padStart(4, "0")}.txt`,
+							"content",
+						] as const,
+				),
+			],
+			{ failMetadataDeleteOnce: true },
+		);
+		const logs: unknown[] = [];
+
+		await expect(
+			cleanupSites(
+				storage,
+				() => now,
+				(entry) => logs.push(entry),
+			),
+		).rejects.toThrow("simulated metadata delete failure");
+		expect(storage.entries.has(metadataKey)).toBe(true);
+		expect(
+			[...storage.entries.keys()].filter((key) =>
+				key.startsWith(`sites/${siteId}/`),
+			),
+		).toEqual([]);
+		expect(logs).toEqual([
+			{
+				siteId,
+				reason: "expired",
+				deletedObjects: 1001,
+				result: "failed",
+			},
+		]);
+
+		const retry = await cleanupSites(
+			storage,
+			() => now,
+			() => undefined,
+		);
+
+		expect(retry).toMatchObject({ deletedSites: 1, skippedSites: 0 });
+		expect(storage.entries.size).toBe(0);
+		expect(storage.deleteBatches.map((batch) => batch.length)).toEqual([
+			1000, 1, 1, 1,
+		]);
+	});
+
+	it("runs cleanup from the scheduled handler using the scheduled time", async () => {
+		const siteId = "00000000-0000-4000-8000-000000000107";
+		await Promise.all([
+			env.SITES.put(
+				`_meta/${siteId}.json`,
+				storedMetadata(
+					"active",
+					"2026-08-05T10:00:00.000Z",
+					"2026-08-05T11:00:00.000Z",
+				),
+			),
+			env.SITES.put(`sites/${siteId}/index.html`, "scheduled"),
+		]);
+
+		await worker.scheduled({ scheduledTime: now } as ScheduledController, env);
+
+		expect(await env.SITES.get(`_meta/${siteId}.json`)).toBeNull();
+		expect(await env.SITES.get(`sites/${siteId}/index.html`)).toBeNull();
 	});
 });

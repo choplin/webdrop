@@ -6,6 +6,9 @@ const pagesPrefix = "/p/";
 const metadataPrefix = "_meta/";
 const sitesPrefix = "sites/";
 const defaultTtlSeconds = 24 * 60 * 60;
+const uploadingCleanupAgeMilliseconds = 24 * 60 * 60 * 1000;
+const cleanupScanLimit = 1000;
+const cleanupDeleteBatchSize = 1000;
 const allowedTtlSeconds = new Map([
 	["3600", 60 * 60],
 	["86400", defaultTtlSeconds],
@@ -94,6 +97,50 @@ interface PublishedSite {
 	url: string;
 	expiresAt: string;
 }
+
+type CleanupReason = "expired" | "abandoned_upload";
+type CleanupSiteResult =
+	| "already_absent"
+	| "deleted"
+	| "failed"
+	| "skipped_changed";
+
+interface CleanupListResult {
+	objects: { key: string }[];
+	truncated: boolean;
+}
+
+interface CleanupObjectBody {
+	size: number;
+	text(): Promise<string>;
+}
+
+interface CleanupStorage {
+	list(options: { prefix: string; limit: number }): Promise<CleanupListResult>;
+	get(key: string): Promise<CleanupObjectBody | null>;
+	delete(keys: string | string[]): Promise<void>;
+}
+
+interface CleanupLog {
+	siteId?: string;
+	reason: CleanupReason | "scan_limit_exceeded";
+	deletedObjects: number;
+	result: CleanupSiteResult | "warning";
+}
+
+export type CleanupResult =
+	| {
+			result: "completed";
+			scannedSites: number;
+			deletedSites: number;
+			skippedSites: number;
+	  }
+	| {
+			result: "scan_limit_exceeded";
+			scannedSites: number;
+			deletedSites: 0;
+			skippedSites: 0;
+	  };
 
 function notFound(): Response {
 	return new Response("Not found", { status: 404 });
@@ -390,6 +437,180 @@ function parseMetadata(value: string): SiteMetadata | null {
 	}
 }
 
+function cleanupReason(
+	metadata: SiteMetadata,
+	now: number,
+): CleanupReason | null {
+	if (metadata.status === "active") {
+		const expiresAt = parseCanonicalTimestamp(metadata.expiresAt);
+		return expiresAt !== null && expiresAt <= now ? "expired" : null;
+	}
+
+	const createdAt = parseCanonicalTimestamp(metadata.createdAt);
+	return createdAt !== null && createdAt + uploadingCleanupAgeMilliseconds < now
+		? "abandoned_upload"
+		: null;
+}
+
+function siteIdFromMetadataKey(key: string): string | null {
+	if (!key.startsWith(metadataPrefix) || !key.endsWith(".json")) {
+		return null;
+	}
+
+	const siteId = key.slice(metadataPrefix.length, -".json".length);
+	return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+		siteId,
+	)
+		? siteId
+		: null;
+}
+
+async function readCleanupMetadata(
+	storage: CleanupStorage,
+	key: string,
+): Promise<SiteMetadata | null> {
+	const object = await storage.get(key);
+	if (!object || object.size > maxMetadataBytes) {
+		return null;
+	}
+
+	return parseMetadata(await object.text());
+}
+
+function defaultCleanupLogger(entry: CleanupLog): void {
+	const message = JSON.stringify(entry);
+	if (entry.result === "warning") {
+		console.warn(message);
+		return;
+	}
+
+	console.log(message);
+}
+
+async function deleteSiteObjects(
+	storage: CleanupStorage,
+	siteId: string,
+	onDeleted: (count: number) => void,
+): Promise<void> {
+	const prefix = `${sitesPrefix}${siteId}/`;
+
+	while (true) {
+		const page = await storage.list({
+			prefix,
+			limit: cleanupDeleteBatchSize,
+		});
+		const keys = page.objects.map(({ key }) => key);
+		if (keys.length === 0) {
+			return;
+		}
+
+		await storage.delete(keys);
+		onDeleted(keys.length);
+		if (!page.truncated) {
+			return;
+		}
+	}
+}
+
+export async function cleanupSites(
+	storage: CleanupStorage,
+	now: () => number = () => Date.now(),
+	log: (entry: CleanupLog) => void = defaultCleanupLogger,
+): Promise<CleanupResult> {
+	const scanTime = now();
+	const metadataPage = await storage.list({
+		prefix: metadataPrefix,
+		limit: cleanupScanLimit,
+	});
+	if (metadataPage.truncated) {
+		log({
+			reason: "scan_limit_exceeded",
+			deletedObjects: 0,
+			result: "warning",
+		});
+		return {
+			result: "scan_limit_exceeded",
+			scannedSites: metadataPage.objects.length,
+			deletedSites: 0,
+			skippedSites: 0,
+		};
+	}
+
+	const candidates: { siteId: string; reason: CleanupReason }[] = [];
+	for (const { key } of metadataPage.objects) {
+		const siteId = siteIdFromMetadataKey(key);
+		if (!siteId) {
+			continue;
+		}
+
+		const metadata = await readCleanupMetadata(storage, key);
+		const reason = metadata ? cleanupReason(metadata, scanTime) : null;
+		if (reason) {
+			candidates.push({ siteId, reason });
+		}
+	}
+
+	let deletedSites = 0;
+	let skippedSites = 0;
+	for (const candidate of candidates) {
+		const key = metadataKey(candidate.siteId);
+		const currentMetadata = await readCleanupMetadata(storage, key);
+		if (!currentMetadata) {
+			skippedSites += 1;
+			log({
+				siteId: candidate.siteId,
+				reason: candidate.reason,
+				deletedObjects: 0,
+				result: "already_absent",
+			});
+			continue;
+		}
+
+		const currentReason = cleanupReason(currentMetadata, scanTime);
+		if (!currentReason) {
+			skippedSites += 1;
+			log({
+				siteId: candidate.siteId,
+				reason: candidate.reason,
+				deletedObjects: 0,
+				result: "skipped_changed",
+			});
+			continue;
+		}
+
+		let deletedObjects = 0;
+		try {
+			await deleteSiteObjects(storage, candidate.siteId, (count) => {
+				deletedObjects += count;
+			});
+			await storage.delete(key);
+			deletedObjects += 1;
+			deletedSites += 1;
+			log({
+				siteId: candidate.siteId,
+				reason: currentReason,
+				deletedObjects,
+				result: "deleted",
+			});
+		} catch (error) {
+			log({
+				siteId: candidate.siteId,
+				reason: currentReason,
+				deletedObjects,
+				result: "failed",
+			});
+			throw error;
+		}
+	}
+
+	return {
+		result: "completed",
+		scannedSites: metadataPage.objects.length,
+		deletedSites,
+		skippedSites,
+	};
+}
+
 function parsePageRequest(
 	pathname: string,
 ): { siteId: string; relativePath: string } | null {
@@ -681,5 +902,8 @@ export default {
 		}
 
 		return notFound();
+	},
+	async scheduled(controller: ScheduledController, env: Env): Promise<void> {
+		await cleanupSites(env.SITES, () => controller.scheduledTime);
 	},
 } satisfies ExportedHandler<Env>;
