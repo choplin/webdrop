@@ -1,6 +1,6 @@
 {
 	"$schema": "../../node_modules/wrangler/config-schema.json",
-	"name": "webdrop-limited",
+	"name": "webdrop-acceptance",
 	"main": "../../src/worker.ts",
 	"compatibility_date": "2026-07-26",
 	"compatibility_flags": ["nodejs_compat"],
@@ -35,7 +35,7 @@
 	"r2_buckets": [
 		{
 			"binding": "SITES",
-			"bucket_name": "replace-with-limited-bucket"
+			"bucket_name": "replace-with-acceptance-bucket"
 		}
 	]
 }

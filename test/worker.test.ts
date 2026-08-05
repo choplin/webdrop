@@ -2,8 +2,8 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import worker, { cleanupSites, handlePages, publishSite } from "../src/worker";
 
-const controlOrigin = "https://control.example.test";
-const pagesOrigin = "https://pages.example.test";
+const controlOrigin = "https://webdrop.example.test";
+const pagesOrigin = "https://pages.webdrop.example.test";
 
 interface PublishResult {
 	siteId: string;
@@ -430,7 +430,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 				{ path: "assets/site.css", content: "body {}" },
 			]),
 			storage,
-			"pages.example.test",
+			"pages.webdrop.example.test",
 			() => siteId,
 			() => Date.parse("2026-08-05T00:00:00.000Z"),
 		);
@@ -475,7 +475,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 				body: publishForm([{ path: "index.html", content: "ttl" }], ttl),
 			}),
 			recordingStorage(),
-			"pages.example.test",
+			"pages.webdrop.example.test",
 			() => crypto.randomUUID(),
 			() => Date.parse("2026-08-05T00:00:00.000Z"),
 		);
@@ -501,7 +501,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 				body: publishForm([{ path: "index.html", content: "ttl" }], ttl),
 			}),
 			storage,
-			"pages.example.test",
+			"pages.webdrop.example.test",
 		);
 
 		expect(response.status).toBe(400);
@@ -536,7 +536,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		const response = await publishSite(
 			publishRequest([{ path: "index.html", content: "not active" }]),
 			storage,
-			"pages.example.test",
+			"pages.webdrop.example.test",
 			() => siteId,
 		);
 
@@ -576,7 +576,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		const response = await publishSite(
 			publishRequest([{ path: "index.html", content: "replacement" }]),
 			storage,
-			"pages.example.test",
+			"pages.webdrop.example.test",
 			() => siteId,
 		);
 

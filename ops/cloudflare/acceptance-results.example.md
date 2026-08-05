@@ -1,4 +1,4 @@
-# Limited Cloudflare acceptance record
+# Cloudflare acceptance record
 
 Copy this file to `acceptance-results.md`. Record only non-secret observations.
 Do not include email addresses, cookies, Access assertions, credentials, account
@@ -30,7 +30,7 @@ IDs, private object bodies, or copied response bodies.
 | Check | Result | Non-secret evidence |
 | --- | --- | --- |
 | Local repository checks pass | NOT RUN | |
-| Limited configuration validator passes | NOT RUN | |
+| Acceptance configuration validator passes | NOT RUN | |
 | Wrangler deploy dry-run passes | NOT RUN | |
 | Only the application and pages custom domains route to the Worker | NOT RUN | |
 | `workers.dev` is disabled | NOT RUN | |

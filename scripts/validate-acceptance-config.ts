@@ -6,7 +6,7 @@ const placeholderValues = new Set([
 	"00000000000000000000000000000000",
 	"webdrop.example.invalid",
 	"pages.webdrop.example.invalid",
-	"replace-with-limited-bucket",
+	"replace-with-acceptance-bucket",
 ]);
 
 function asObject(value: unknown, path: string): JsonObject {
@@ -91,8 +91,8 @@ function validateConfig(value: unknown): void {
 		],
 		"config",
 	);
-	if (config.name !== "webdrop-limited") {
-		throw new Error("name must be webdrop-limited");
+	if (config.name !== "webdrop-acceptance") {
+		throw new Error("name must be webdrop-acceptance");
 	}
 	if (config.main !== "../../src/worker.ts") {
 		throw new Error("main must reference the reviewed Worker entry point");
@@ -218,11 +218,11 @@ function validateConfig(value: unknown): void {
 const configPath = process.argv[2];
 if (!configPath) {
 	throw new Error(
-		"usage: node scripts/validate-limited-config.ts <wrangler-config>",
+		"usage: node scripts/validate-acceptance-config.ts <wrangler-config>",
 	);
 }
 
 const source = await readFile(configPath, "utf8");
 const parsed: unknown = JSON.parse(source);
 validateConfig(parsed);
-console.log(`Validated limited Cloudflare targets in ${configPath}`);
+console.log(`Validated Cloudflare acceptance targets in ${configPath}`);

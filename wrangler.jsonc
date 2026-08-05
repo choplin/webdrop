@@ -16,8 +16,8 @@
 	},
 	"vars": {
 		// These are public hostnames. Cloudflare Access configuration is intentionally M4 scope.
-		"CONTROL_HOSTNAME": "control.example.test",
-		"PAGES_HOSTNAME": "pages.example.test"
+		"CONTROL_HOSTNAME": "webdrop.example.test",
+		"PAGES_HOSTNAME": "pages.webdrop.example.test"
 	},
 	"r2_buckets": [
 		{

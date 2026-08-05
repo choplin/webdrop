@@ -8,4 +8,4 @@ dist/
 .env.*
 *.tsbuildinfo
 ops/cloudflare/acceptance-results.md
-ops/cloudflare/wrangler.limited.jsonc
+ops/cloudflare/wrangler.acceptance.jsonc

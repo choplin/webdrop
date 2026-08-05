@@ -1,6 +1,6 @@
-# Limited Cloudflare environment
+# Cloudflare acceptance environment
 
-This runbook creates and accepts one limited Webdrop environment. It does not
+This runbook creates and verifies one Webdrop acceptance environment. It does not
 automate Cloudflare infrastructure changes. Stop before every dashboard or
 Wrangler mutation and reconfirm the exact account, zone, hostnames, bucket, and
 Worker name with the operator.
@@ -25,8 +25,8 @@ have already been removed.
 1. Copy the tracked template to the ignored configuration:
 
    ```sh
-   cp ops/cloudflare/wrangler.limited.example.jsonc \
-     ops/cloudflare/wrangler.limited.jsonc
+   cp ops/cloudflare/wrangler.acceptance.example.jsonc \
+     ops/cloudflare/wrangler.acceptance.jsonc
    ```
 
 2. Replace the account ID, base `.example.invalid` hostname, its derived pages
@@ -41,11 +41,11 @@ have already been removed.
    ```sh
    pnpm run check
    pnpm test
-   pnpm run check:limited
+   pnpm run check:acceptance
    git diff --check
    ```
 
-`check:limited` rejects template values, alternate Worker endpoints, unexpected
+`check:acceptance` rejects template values, alternate Worker endpoints, unexpected
 routes, a public-origin overlap, the wrong R2 binding, or a changed Cron Trigger.
 It then builds the assets and runs `wrangler deploy --dry-run` into `.wrangler/`.
 
@@ -59,14 +59,14 @@ pnpm exec wrangler login
 pnpm exec wrangler whoami
 pnpm exec wrangler r2 bucket list
 pnpm exec wrangler deployments list \
-  --config ops/cloudflare/wrangler.limited.jsonc
+  --config ops/cloudflare/wrangler.acceptance.jsonc
 ```
 
 Record only display names and the previous Worker version in a copy of
 `ops/cloudflare/acceptance-results.example.md`. Confirm that the authenticated
 account owns the configured zone and bucket.
 
-## Configure the limited Cloudflare targets
+## Configure the Cloudflare acceptance targets
 
 These steps mutate Cloudflare. Before each group, show the exact targets to the
 operator and obtain explicit approval.
@@ -93,7 +93,7 @@ operator and obtain explicit approval.
 
    ```sh
    pnpm exec wrangler deploy \
-     --config ops/cloudflare/wrangler.limited.jsonc \
+     --config ops/cloudflare/wrangler.acceptance.jsonc \
      --strict
    ```
 
@@ -130,8 +130,8 @@ Use a fixture directory that contains no private information.
    ```sh
    curl --silent --show-error --output /dev/null \
      --write-out '%{http_code}\n' \
-     --header "Origin: https://<CONTROL_HOSTNAME>" \
-     --request POST "https://<CONTROL_HOSTNAME>/publish"
+     --header "Origin: https://<APPLICATION_HOSTNAME>" \
+     --request POST "https://<APPLICATION_HOSTNAME>/publish"
    ```
 
    The status must be the expected Access challenge or denial for the configured
@@ -163,10 +163,10 @@ a data snapshot.
 
    ```sh
    pnpm exec wrangler rollback <PREVIOUS_VERSION_ID> \
-     --config ops/cloudflare/wrangler.limited.jsonc
+     --config ops/cloudflare/wrangler.acceptance.jsonc
    ```
 
-3. If the limited environment must be withdrawn, remove the two Worker custom
+3. If the acceptance environment must be withdrawn, remove the two Worker custom
    domains after explicit approval and verify that neither hostname reaches the
    Worker. Only then disable the corresponding Access applications. Disabling
    Access while a Worker route is still active would create a public bypass.
