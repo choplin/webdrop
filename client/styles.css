@@ -253,27 +253,10 @@
 	.publish-metadata {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: flex-end;
 		gap: 1rem;
 		color: #666;
 		font-size: 0.75rem;
-	}
-
-	.publish-safety {
-		margin: 0;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4375rem;
-	}
-
-	.publish-safety svg {
-		inline-size: 0.8125rem;
-		block-size: 0.8125rem;
-		fill: none;
-		stroke: currentcolor;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-		stroke-width: 1.5;
 	}
 
 	.publish-limit-list {

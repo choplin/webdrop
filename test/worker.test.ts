@@ -188,9 +188,6 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(document).toContain('for="site-file"><span>Choose HTML file</span>');
 		expect(document).toContain('for="site-folder"><span>Choose folder</span>');
 		expect(document).toContain('accept=".html,.htm,text/html"');
-		expect(document).toContain(
-			"Files stay private until publishing is complete.",
-		);
 		expect(document).toContain('class="brand-mark"');
 		expect(document).toContain('src="/assets/logo.png"');
 		expect(document).toContain('src="/assets/app.js"');
