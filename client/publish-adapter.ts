@@ -202,6 +202,7 @@ function formatBytes(bytes: number): string {
 const form = document.querySelector<HTMLFormElement>("#publish-form");
 const htmlFileInput = document.querySelector<HTMLInputElement>("#site-file");
 const folderInput = document.querySelector<HTMLInputElement>("#site-folder");
+const ttlSelect = document.querySelector<HTMLSelectElement>("#publish-ttl");
 const clientValidation = document.querySelector<HTMLElement>(
 	"#publish-client-validation",
 );
@@ -421,10 +422,11 @@ form?.addEventListener("htmx:configRequest", (event) => {
 	}
 
 	const prepared = updateSelectionSummary();
-	if (!prepared) {
+	if (!prepared || !ttlSelect) {
 		event.preventDefault();
 		return;
 	}
+	prepared.formData.set("ttl", ttlSelect.value);
 
 	if (!setHtmxMultipartParameters(event.detail, prepared.formData)) {
 		showClientValidation(

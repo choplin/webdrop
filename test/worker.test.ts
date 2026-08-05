@@ -1,6 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { publishSite } from "../src/worker";
+import { handlePages, publishSite } from "../src/worker";
 
 const controlOrigin = "https://control.example.test";
 const pagesOrigin = "https://pages.example.test";
@@ -8,6 +8,7 @@ const pagesOrigin = "https://pages.example.test";
 interface PublishResult {
 	siteId: string;
 	url: string;
+	expiresAt: string;
 }
 
 interface FilePart {
@@ -31,18 +32,23 @@ function isPublishResult(value: unknown): value is PublishResult {
 		value !== null &&
 		"siteId" in value &&
 		"url" in value &&
+		"expiresAt" in value &&
 		typeof value.siteId === "string" &&
-		typeof value.url === "string"
+		typeof value.url === "string" &&
+		typeof value.expiresAt === "string"
 	);
 }
 
-function publishForm(entries: UploadEntry[]): FormData {
+function publishForm(entries: UploadEntry[], ttl?: string): FormData {
 	const formData = new FormData();
 	const parts: FilePart[] = entries.map(({ path }, index) => ({
 		field: `file-${index}`,
 		path,
 	}));
 	formData.set("files", JSON.stringify(parts));
+	if (ttl !== undefined) {
+		formData.set("ttl", ttl);
+	}
 
 	for (const [index, entry] of entries.entries()) {
 		formData.set(
@@ -194,6 +200,15 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(document).toContain("webkitdirectory");
 		expect(document).toContain("publish-client-validation");
 		expect(document).toContain('hx-post="/publish"');
+		const selectionStart = document.indexOf('<div class="publish-selection">');
+		const expiryStart = document.indexOf('<div class="publish-expiry">');
+		expect(selectionStart).toBeGreaterThan(-1);
+		expect(expiryStart).toBeGreaterThan(selectionStart);
+		expect(document).toContain('for="publish-ttl">Expires in</label>');
+		expect(document).toContain('name="ttl"');
+		expect(document).toContain(
+			'<option value="86400" selected>24 hours</option>',
+		);
 	});
 
 	it("returns 404 for cross-plane and unknown routes", async () => {
@@ -259,7 +274,10 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(utilitiesLayerEnd).toBeGreaterThan(utilitiesLayerStart);
 
 		for (const [selector, declaration] of [
-			[".publish-submit,.publish-selection,.publish-progress", "display:none"],
+			[
+				".publish-submit,.publish-selection,.publish-progress,.publish-expiry",
+				"display:none",
+			],
 			[
 				".publish-form:not([data-publish-state]) .publish-picker,.publish-form[data-publish-state=invalid] .publish-picker",
 				"display:inline-flex",
@@ -269,7 +287,7 @@ describe("Webdrop M1.1 host dispatch", () => {
 				"display:none",
 			],
 			[
-				".publish-form[data-publish-state=ready] .publish-submit",
+				".publish-form[data-publish-state=ready] .publish-submit,.publish-form[data-publish-state=ready] .publish-expiry",
 				"display:inline-flex",
 			],
 			[
@@ -309,7 +327,9 @@ describe("Webdrop M2.1 publish boundary", () => {
 		expect(success.headers.get("Content-Type")).toBe(
 			"text/html; charset=utf-8",
 		);
-		expect(await success.text()).toContain('id="publish-result"');
+		const successFragment = await success.text();
+		expect(successFragment).toContain('id="publish-result"');
+		expect(successFragment).toContain("<time datetime=");
 
 		const failure = await htmxPublish([
 			{ path: "missing-index.html", content: "invalid" },
@@ -346,6 +366,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 			storage,
 			"pages.example.test",
 			() => siteId,
+			() => Date.parse("2026-08-05T00:00:00.000Z"),
 		);
 
 		expect(response.status).toBe(201);
@@ -363,15 +384,63 @@ describe("Webdrop M2.1 publish boundary", () => {
 		expect(metadataWrites).toEqual([
 			expect.objectContaining({
 				status: "uploading",
+				createdAt: "2026-08-05T00:00:00.000Z",
+				expiresAt: "2026-08-06T00:00:00.000Z",
 				fileCount: 2,
 				totalBytes: 14,
 			}),
 			expect.objectContaining({
 				status: "active",
+				expiresAt: "2026-08-06T00:00:00.000Z",
 				fileCount: 2,
 				totalBytes: 14,
 			}),
 		]);
+	});
+
+	it.each([
+		["3600", "2026-08-05T01:00:00.000Z"],
+		["86400", "2026-08-06T00:00:00.000Z"],
+		["604800", "2026-08-12T00:00:00.000Z"],
+	])("stores approved TTL %s as UTC expiresAt", async (ttl, expiresAt) => {
+		const response = await publishSite(
+			new Request(`${controlOrigin}/publish`, {
+				method: "POST",
+				body: publishForm([{ path: "index.html", content: "ttl" }], ttl),
+			}),
+			recordingStorage(),
+			"pages.example.test",
+			() => crypto.randomUUID(),
+			() => Date.parse("2026-08-05T00:00:00.000Z"),
+		);
+
+		expect(response.status).toBe(201);
+		const result: unknown = await response.json();
+		expect(result).toMatchObject({ expiresAt });
+	});
+
+	it.each([
+		"0",
+		"7200",
+		"86400.5",
+		" 86400 ",
+		"8.64e4",
+		"+86400",
+		"not-a-duration",
+	])("rejects unapproved TTL %s before storage writes", async (ttl) => {
+		const storage = recordingStorage();
+		const response = await publishSite(
+			new Request(`${controlOrigin}/publish`, {
+				method: "POST",
+				body: publishForm([{ path: "index.html", content: "ttl" }], ttl),
+			}),
+			storage,
+			"pages.example.test",
+		);
+
+		expect(response.status).toBe(400);
+		expect(storage.headCalls).toEqual([]);
+		expect(storage.puts).toEqual([]);
 	});
 
 	it("uses the request scheme and port for local pages URLs", async () => {
@@ -561,6 +630,99 @@ describe("Webdrop M2.1 publish boundary", () => {
 			"text/html; charset=utf-8",
 		);
 		expect(await response.text()).toBe("");
+	});
+
+	it("serves before expiry and returns 404 at and after the exact boundary for GET and HEAD", async () => {
+		const siteId = "00000000-0000-4000-8000-000000000007";
+		const expiresAt = "2026-08-05T01:00:00.000Z";
+		await Promise.all([
+			env.SITES.put(
+				`_meta/${siteId}.json`,
+				JSON.stringify({
+					status: "active",
+					createdAt: "2026-08-05T00:00:00.000Z",
+					expiresAt,
+					fileCount: 1,
+					totalBytes: 7,
+				}),
+			),
+			env.SITES.put(`sites/${siteId}/index.html`, "expires"),
+		]);
+		const request = new Request(`${pagesOrigin}/p/${siteId}/`);
+		const headRequest = new Request(request, { method: "HEAD" });
+
+		const [getBefore, headBefore, getAt, headAfter] = await Promise.all([
+			handlePages(request, env, () => Date.parse(expiresAt) - 1),
+			handlePages(headRequest, env, () => Date.parse(expiresAt) - 1),
+			handlePages(request, env, () => Date.parse(expiresAt)),
+			handlePages(headRequest, env, () => Date.parse(expiresAt) + 1),
+		]);
+
+		expect(getBefore.status).toBe(200);
+		expect(await getBefore.text()).toBe("expires");
+		expect(headBefore.status).toBe(200);
+		expect(await headBefore.text()).toBe("");
+		expect(getAt.status).toBe(404);
+		expect(headAfter.status).toBe(404);
+	});
+
+	it.each([
+		["missing expiresAt", { status: "active" }],
+		["invalid expiresAt", { status: "active", expiresAt: "tomorrow" }],
+		[
+			"invalid createdAt",
+			{
+				status: "active",
+				createdAt: "yesterday",
+				expiresAt: "2026-08-05T01:00:00.000Z",
+			},
+		],
+		[
+			"expiresAt before createdAt",
+			{
+				status: "active",
+				createdAt: "2026-08-05T02:00:00.000Z",
+				expiresAt: "2026-08-05T01:00:00.000Z",
+			},
+		],
+		[
+			"unapproved lifetime",
+			{
+				status: "active",
+				expiresAt: "2026-08-06T00:00:00.001Z",
+			},
+		],
+		[
+			"non-canonical expiresAt",
+			{ status: "active", expiresAt: "2026-08-05T01:00:00Z" },
+		],
+		[
+			"unknown status",
+			{ status: "ready", expiresAt: "2026-08-05T01:00:00.000Z" },
+		],
+	])("returns safe 404 for metadata with %s", async (_case, overrides) => {
+		const siteId = crypto.randomUUID();
+		await Promise.all([
+			env.SITES.put(
+				`_meta/${siteId}.json`,
+				JSON.stringify({
+					createdAt: "2026-08-05T00:00:00.000Z",
+					fileCount: 1,
+					totalBytes: 6,
+					...overrides,
+				}),
+			),
+			env.SITES.put(`sites/${siteId}/index.html`, "hidden"),
+		]);
+
+		const response = await handlePages(
+			new Request(`${pagesOrigin}/p/${siteId}/`),
+			env,
+			() => Date.parse("2026-08-05T00:30:00.000Z"),
+		);
+
+		expect(response.status).toBe(404);
+		expect(await response.text()).toBe("Not found");
 	});
 
 	it("preserves pages method and service worker protections", async () => {

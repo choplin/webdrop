@@ -5,6 +5,15 @@ const maxMetadataBytes = 2048;
 const pagesPrefix = "/p/";
 const metadataPrefix = "_meta/";
 const sitesPrefix = "sites/";
+const defaultTtlSeconds = 24 * 60 * 60;
+const allowedTtlSeconds = new Map([
+	["3600", 60 * 60],
+	["86400", defaultTtlSeconds],
+	["604800", 7 * 24 * 60 * 60],
+]);
+const allowedTtlMilliseconds = new Set(
+	[...allowedTtlSeconds.values()].map((seconds) => seconds * 1000),
+);
 
 const pagesHeaders = {
 	"Cache-Control": "no-store",
@@ -49,6 +58,7 @@ type SiteStatus = "uploading" | "active";
 interface SiteMetadata {
 	status: SiteStatus;
 	createdAt: string;
+	expiresAt: string;
 	fileCount: number;
 	totalBytes: number;
 }
@@ -56,6 +66,7 @@ interface SiteMetadata {
 interface PublishPayload {
 	files: PublishedFile[];
 	totalBytes: number;
+	ttlSeconds: number;
 }
 
 interface PublishedFile {
@@ -81,6 +92,7 @@ interface PublishStorage {
 interface PublishedSite {
 	siteId: string;
 	url: string;
+	expiresAt: string;
 }
 
 function notFound(): Response {
@@ -143,10 +155,11 @@ function publishErrorFragment(message: string, status: number): Response {
 	);
 }
 
-function publishSuccessFragment(url: string): Response {
+function publishSuccessFragment(url: string, expiresAt: string): Response {
 	const safeUrl = escapeHtml(url);
+	const safeExpiresAt = escapeHtml(expiresAt);
 	return new Response(
-		`<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"><div class="alert alert-success" role="status"><span>Site is live.</span><a class="link" href="${safeUrl}">Open published site</a></div></section>`,
+		`<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"><div class="alert alert-success" role="status"><span>Site is live until <time datetime="${safeExpiresAt}">${safeExpiresAt}</time>.</span><a class="link" href="${safeUrl}">Open published site</a></div></section>`,
 		{ status: 201, headers: controlHtmlHeaders },
 	);
 }
@@ -250,6 +263,21 @@ function parseFileParts(
 }
 
 function parsePublishPayload(formData: FormData): PublishPayload | Response {
+	const ttlEntries = formData.getAll("ttl");
+	const ttlValue = ttlEntries.length === 0 ? null : ttlEntries[0];
+	if (
+		ttlEntries.length > 1 ||
+		(ttlValue !== null && typeof ttlValue !== "string")
+	) {
+		return badRequest("ttl must be one approved duration");
+	}
+
+	const ttlSeconds =
+		ttlValue === null ? defaultTtlSeconds : allowedTtlSeconds.get(ttlValue);
+	if (ttlSeconds === undefined) {
+		return badRequest("ttl must be one approved duration");
+	}
+
 	const partEntries = formData.getAll("files");
 	const parts = parseFileParts(
 		partEntries.length === 1 ? (partEntries[0] ?? null) : null,
@@ -308,7 +336,7 @@ function parsePublishPayload(formData: FormData): PublishPayload | Response {
 		return badRequest("File paths and multipart field names must be unique");
 	}
 
-	return { files, totalBytes };
+	return { files, totalBytes, ttlSeconds };
 }
 
 function isResponse(value: PublishPayload | Response): value is Response {
@@ -321,9 +349,19 @@ function isPublishedSite(value: unknown): value is PublishedSite {
 		value !== null &&
 		"siteId" in value &&
 		"url" in value &&
+		"expiresAt" in value &&
 		typeof value.siteId === "string" &&
-		typeof value.url === "string"
+		typeof value.url === "string" &&
+		typeof value.expiresAt === "string"
 	);
+}
+
+function parseCanonicalTimestamp(value: string): number | null {
+	const timestamp = Date.parse(value);
+	return Number.isFinite(timestamp) &&
+		new Date(timestamp).toISOString() === value
+		? timestamp
+		: null;
 }
 
 function isSiteMetadata(value: unknown): value is SiteMetadata {
@@ -332,10 +370,12 @@ function isSiteMetadata(value: unknown): value is SiteMetadata {
 		value !== null &&
 		"status" in value &&
 		"createdAt" in value &&
+		"expiresAt" in value &&
 		"fileCount" in value &&
 		"totalBytes" in value &&
 		(value.status === "uploading" || value.status === "active") &&
 		typeof value.createdAt === "string" &&
+		typeof value.expiresAt === "string" &&
 		typeof value.fileCount === "number" &&
 		typeof value.totalBytes === "number"
 	);
@@ -387,6 +427,7 @@ function parsePageRequest(
 async function readActiveMetadata(
 	bucket: R2Bucket,
 	siteId: string,
+	now: () => number,
 ): Promise<SiteMetadata | null> {
 	const metadataObject = await bucket.get(metadataKey(siteId));
 	if (!metadataObject || metadataObject.size > maxMetadataBytes) {
@@ -394,7 +435,18 @@ async function readActiveMetadata(
 	}
 
 	const metadata = parseMetadata(await metadataObject.text());
-	return metadata?.status === "active" ? metadata : null;
+	if (metadata?.status !== "active") {
+		return null;
+	}
+
+	const createdAt = parseCanonicalTimestamp(metadata.createdAt);
+	const expiresAt = parseCanonicalTimestamp(metadata.expiresAt);
+	return createdAt !== null &&
+		expiresAt !== null &&
+		allowedTtlMilliseconds.has(expiresAt - createdAt) &&
+		now() < expiresAt
+		? metadata
+		: null;
 }
 
 export async function publishSite(
@@ -402,6 +454,7 @@ export async function publishSite(
 	storage: PublishStorage,
 	pagesHostname: string,
 	createSiteId: () => string = () => crypto.randomUUID(),
+	now: () => number = () => Date.now(),
 ): Promise<Response> {
 	if (request.method !== "POST") {
 		return notFound();
@@ -426,9 +479,11 @@ export async function publishSite(
 	}
 
 	const siteId = createSiteId();
+	const createdAt = now();
 	const metadata: SiteMetadata = {
 		status: "uploading",
-		createdAt: new Date().toISOString(),
+		createdAt: new Date(createdAt).toISOString(),
+		expiresAt: new Date(createdAt + payload.ttlSeconds * 1000).toISOString(),
 		fileCount: payload.files.length,
 		totalBytes: payload.totalBytes,
 	};
@@ -465,6 +520,7 @@ export async function publishSite(
 		{
 			siteId,
 			url: publishedSiteUrl(request, pagesHostname, siteId),
+			expiresAt: metadata.expiresAt,
 		},
 		{ status: 201 },
 	);
@@ -533,7 +589,7 @@ async function handleControlPublish(
 		);
 	}
 
-	return publishSuccessFragment(publishedSite.url);
+	return publishSuccessFragment(publishedSite.url, publishedSite.expiresAt);
 }
 
 async function handleControl(request: Request, env: Env): Promise<Response> {
@@ -559,7 +615,11 @@ async function handleControl(request: Request, env: Env): Promise<Response> {
 	return controlPage(request, env.ASSETS);
 }
 
-async function handlePages(request: Request, env: Env): Promise<Response> {
+export async function handlePages(
+	request: Request,
+	env: Pick<Env, "SITES">,
+	now: () => number = () => Date.now(),
+): Promise<Response> {
 	const url = new URL(request.url);
 	const page = parsePageRequest(url.pathname);
 	if (!page) {
@@ -574,7 +634,7 @@ async function handlePages(request: Request, env: Env): Promise<Response> {
 		return new Response("Forbidden", { status: 403, headers: pagesHeaders });
 	}
 
-	if (!(await readActiveMetadata(env.SITES, page.siteId))) {
+	if (!(await readActiveMetadata(env.SITES, page.siteId, now))) {
 		return pagesNotFound();
 	}
 
