@@ -1,0 +1,41 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "webdrop-limited",
+	"main": "../../src/worker.ts",
+	"compatibility_date": "2026-07-26",
+	"compatibility_flags": ["nodejs_compat"],
+	"account_id": "00000000000000000000000000000000",
+	"workers_dev": false,
+	"preview_urls": false,
+	"routes": [
+		{
+			"pattern": "control.example.invalid",
+			"custom_domain": true
+		},
+		{
+			"pattern": "pages.example.invalid",
+			"custom_domain": true
+		}
+	],
+	"observability": {
+		"enabled": true
+	},
+	"triggers": {
+		"crons": ["0 3 * * *"]
+	},
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "../../dist",
+		"run_worker_first": true
+	},
+	"vars": {
+		"CONTROL_HOSTNAME": "control.example.invalid",
+		"PAGES_HOSTNAME": "pages.example.invalid"
+	},
+	"r2_buckets": [
+		{
+			"binding": "SITES",
+			"bucket_name": "replace-with-limited-bucket"
+		}
+	]
+}

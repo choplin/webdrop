@@ -7,3 +7,5 @@ dist/
 .env
 .env.*
 *.tsbuildinfo
+ops/cloudflare/acceptance-results.md
+ops/cloudflare/wrangler.limited.jsonc

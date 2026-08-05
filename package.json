@@ -6,7 +6,8 @@
 	"packageManager": "pnpm@11.15.0",
 	"scripts": {
 		"build": "vite build",
-		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit",
+		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit && tsc --project scripts/tsconfig.json --noEmit",
+		"check:limited": "node scripts/validate-limited-config.ts ops/cloudflare/wrangler.limited.jsonc && pnpm build && mkdir -p .wrangler/limited-dry-run && WRANGLER_LOG_PATH=.wrangler/limited-dry-run/wrangler.log TMPDIR=.wrangler wrangler deploy --config ops/cloudflare/wrangler.limited.jsonc --dry-run --outdir ../../.wrangler/limited-dry-run",
 		"dev": "vite dev",
 		"format": "biome format --write .",
 		"generate:types": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
