@@ -29,8 +29,9 @@ have already been removed.
      ops/cloudflare/wrangler.limited.jsonc
    ```
 
-2. Replace the account ID, two `.example.invalid` hostnames, and R2 bucket
-   placeholder. The two hostnames must be different custom domains in one
+2. Replace the account ID, base `.example.invalid` hostname, its derived pages
+   hostname, and the R2 bucket placeholder. The application uses the base domain
+   itself; its content origin must be exactly `pages.<base-domain>` in the same
    Cloudflare zone. Do not add a wildcard route.
 3. Review the diff without printing credentials. The file contains public
    resource identifiers but remains untracked to prevent accidental reuse in a
@@ -74,15 +75,15 @@ operator and obtain explicit approval.
    confirm that the public development URL is disabled and no custom domain is
    connected. Do not upload acceptance fixture content through the dashboard.
 2. In Zero Trust, create one self-hosted Access application for the complete
-   control hostname and another for the complete pages hostname. Attach an Allow
-   policy limited to the approved test identities or their approved identity
-   group. Do not add Everyone, Bypass, or Service Auth rules.
+   application hostname and another for the complete pages hostname. Attach an
+   Allow policy limited to the approved test identities or their approved
+   identity group. Do not add Everyone, Bypass, or Service Auth rules.
 3. Inventory every Access application whose path overlaps either hostname, not
    only the two new applications. Remove or disable any more-specific application
-   such as `control.example.com/publish` or `pages.example.com/p/*` before the
-   Worker domains become reachable. A more-specific Access application path does
-   not inherit the broader application's policy and could otherwise retain an
-   Everyone, Bypass, or Service Auth rule.
+   such as `webdrop.example.com/publish` or `pages.webdrop.example.com/p/*`
+   before the Worker domains become reachable. A more-specific Access application
+   path does not inherit the broader application's policy and could otherwise
+   retain an Everyone, Bypass, or Service Auth rule.
 4. Re-open the two complete-hostname applications. Verify their paths cover the
    entire hostname, their Allow rules contain only the approved identities or
    group, and the overlap inventory is empty.
@@ -119,11 +120,12 @@ Use a fixture directory that contains no private information.
    acceptance requires an independently observable interrupted upload.
 3. In a separate browser profile authenticated as the second identity, open the
    returned pages URL before expiry.
-4. In a private browser session with no Access cookies, open the control root and
-   the exact returned `/p/<site>/` pages URL. Confirm that Cloudflare Access
+4. In a private browser session with no Access cookies, open the application root
+   and the exact returned `/p/<site>/` pages URL. Confirm that Cloudflare Access
    challenges both requests and that no Webdrop page or response body is returned.
-   Also send an unauthenticated `POST` to the exact control `/publish` path without
-   a body or stored cookies. Record only its status, not response headers or body:
+   Also send an unauthenticated `POST` to the exact application `/publish` path
+   without a body or stored cookies. Record only its status, not response headers
+   or body:
 
    ```sh
    curl --silent --show-error --output /dev/null \

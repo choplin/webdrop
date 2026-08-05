@@ -4,8 +4,8 @@ type JsonObject = Record<string, unknown>;
 
 const placeholderValues = new Set([
 	"00000000000000000000000000000000",
-	"control.example.invalid",
-	"pages.example.invalid",
+	"webdrop.example.invalid",
+	"pages.webdrop.example.invalid",
 	"replace-with-limited-bucket",
 ]);
 
@@ -136,6 +136,11 @@ function validateConfig(value: unknown): void {
 	validateHostname(pagesHostname, "vars.PAGES_HOSTNAME");
 	if (controlHostname === pagesHostname) {
 		throw new Error("control and pages hostnames must be different origins");
+	}
+	if (pagesHostname !== `pages.${controlHostname}`) {
+		throw new Error(
+			"pages hostname must be pages.<application hostname> so the app remains at the configured domain root",
+		);
 	}
 
 	const routes = asArray(config.routes, "routes");

@@ -12,7 +12,7 @@ IDs, private object bodies, or copied response bodies.
 | Operator | NOT RUN |
 | Cloudflare account display name | NOT RUN |
 | Zone | NOT RUN |
-| Control hostname | NOT RUN |
+| Application hostname | NOT RUN |
 | Pages hostname | NOT RUN |
 | R2 bucket | NOT RUN |
 | Worker name | NOT RUN |
@@ -32,7 +32,7 @@ IDs, private object bodies, or copied response bodies.
 | Local repository checks pass | NOT RUN | |
 | Limited configuration validator passes | NOT RUN | |
 | Wrangler deploy dry-run passes | NOT RUN | |
-| Only the control and pages custom domains route to the Worker | NOT RUN | |
+| Only the application and pages custom domains route to the Worker | NOT RUN | |
 | `workers.dev` is disabled | NOT RUN | |
 | Preview URLs are disabled | NOT RUN | |
 | Both hostnames are covered by Access applications | NOT RUN | |
@@ -50,7 +50,7 @@ IDs, private object bodies, or copied response bodies.
 | The creator can publish the approved fixture directory | NOT RUN | |
 | The returned URL uses the approved pages hostname | NOT RUN | |
 | A different authenticated viewer can open the published page | NOT RUN | |
-| An unauthenticated control-root request is stopped by Access | NOT RUN | |
+| An unauthenticated application-root request is stopped by Access | NOT RUN | |
 | An unauthenticated `POST /publish` is stopped by Access | NOT RUN | |
 | An unauthenticated request to the returned `/p/<site>/` URL is stopped by Access | NOT RUN | |
 | An uploading site is not served before activation | NOT RUN | |

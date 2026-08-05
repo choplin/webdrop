@@ -9,11 +9,11 @@
 	"preview_urls": false,
 	"routes": [
 		{
-			"pattern": "control.example.invalid",
+			"pattern": "webdrop.example.invalid",
 			"custom_domain": true
 		},
 		{
-			"pattern": "pages.example.invalid",
+			"pattern": "pages.webdrop.example.invalid",
 			"custom_domain": true
 		}
 	],
@@ -29,8 +29,8 @@
 		"run_worker_first": true
 	},
 	"vars": {
-		"CONTROL_HOSTNAME": "control.example.invalid",
-		"PAGES_HOSTNAME": "pages.example.invalid"
+		"CONTROL_HOSTNAME": "webdrop.example.invalid",
+		"PAGES_HOSTNAME": "pages.webdrop.example.invalid"
 	},
 	"r2_buckets": [
 		{
