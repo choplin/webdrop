@@ -6,8 +6,8 @@ post-deployment control.
 
 ## Responsibility boundary
 
-The deploy script accepts one application hostname and derives the pages
-hostname as `pages.<application-hostname>`. It builds the reviewed Worker,
+The deploy script accepts one application hostname and derives the sites
+hostname as `sites.<application-hostname>`. It builds the reviewed Worker,
 configures exactly those two Custom Domains, disables `workers.dev` and preview
 URLs, and derives the Worker name by replacing dots in the application hostname
 with hyphens. The automatically provisioned `SITES` R2 bucket uses that Worker
@@ -44,7 +44,7 @@ The command must report these derived targets:
 
 ```text
 Application: https://webdrop.example.com
-Published pages: https://pages.webdrop.example.com
+Published sites: https://sites.webdrop.example.com
 Worker: webdrop-example-com
 R2 bucket: webdrop-example-com-sites
 ```
@@ -67,7 +67,7 @@ which it invokes `pnpm run deploy` without an argument.
 
 After deployment, verify:
 
-1. The Worker has exactly the application and derived pages Custom Domains.
+1. The Worker has exactly the application and derived sites Custom Domains.
 2. `workers.dev` and preview URLs are disabled.
 3. One R2 bucket is bound as `SITES`, with `r2.dev` disabled and no R2 custom
    domain.
@@ -85,7 +85,7 @@ exists:
 3. Add an Allow policy limited to the intended testers. Do not add Everyone,
    Bypass, or Service Auth policies.
 4. In a private browser, verify that both the application root and an exact
-   pages URL are challenged before any Worker response is returned.
+   sites URL are challenged before any Worker response is returned.
 
 Worker-level Access covers requests routed to both Custom Domains. If Access is
 not enabled, record its acceptance checks as not applicable rather than passed.
@@ -103,13 +103,13 @@ cp ops/cloudflare/acceptance-results.example.md \
 Use a fixture directory containing no private information.
 
 1. Open the application hostname, publish the fixture, and record the returned
-   pages URL and expiry.
+   sites URL and expiry.
 2. Open the returned URL before expiry and confirm the approved files are
    served.
 3. Confirm an unknown hostname cannot reach either application surface.
 4. Confirm the R2 metadata and content prefix exist without recording object
    bodies.
-5. After expiry, confirm the same pages URL returns 404.
+5. After expiry, confirm the same sites URL returns 404.
 6. After a scheduled 03:00 UTC cleanup, confirm the metadata key and site prefix
    have been removed. A local scheduled invocation does not prove live Cron
    delivery.

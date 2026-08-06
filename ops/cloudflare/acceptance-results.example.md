@@ -13,7 +13,7 @@ IDs, private object bodies, or copied response bodies.
 | Cloudflare account display name | NOT RUN |
 | Zone | NOT RUN |
 | Application hostname | NOT RUN |
-| Pages hostname | NOT RUN |
+| Sites hostname | NOT RUN |
 | R2 bucket | NOT RUN |
 | Worker name | NOT RUN |
 | Pre-deploy Worker version | NOT RUN |
@@ -33,7 +33,7 @@ IDs, private object bodies, or copied response bodies.
 | Local repository checks pass | NOT RUN | |
 | Shared deployment dry-run passes | NOT RUN | |
 | Wrangler deploy dry-run passes | NOT RUN | |
-| Only the application and pages custom domains route to the Worker | NOT RUN | |
+| Only the application and sites custom domains route to the Worker | NOT RUN | |
 | `workers.dev` is disabled | NOT RUN | |
 | Preview URLs are disabled | NOT RUN | |
 | Optional Access protects the complete Worker, or is recorded as not applicable | NOT RUN | |
@@ -49,7 +49,7 @@ IDs, private object bodies, or copied response bodies.
 | --- | --- | --- |
 | The creator can open the application hostname | NOT RUN | |
 | The creator can publish the approved fixture directory | NOT RUN | |
-| The returned URL uses the approved pages hostname | NOT RUN | |
+| The returned URL uses the approved sites hostname | NOT RUN | |
 | A different browser can open the published page | NOT RUN | |
 | Optional Access stops an unauthenticated application-root request | NOT RUN | |
 | Optional Access stops an unauthenticated `POST /publish` | NOT RUN | |

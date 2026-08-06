@@ -40,7 +40,7 @@ export default defineConfig(({ command }) => ({
 			},
 		},
 		basicSsl({
-			domains: ["localhost", "pages.localhost"],
+			domains: ["localhost", "sites.localhost"],
 		}),
 		tailwindcss(),
 		cloudflare(

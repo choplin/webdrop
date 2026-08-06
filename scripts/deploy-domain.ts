@@ -50,10 +50,10 @@ export function validateAppDomain(value: string): string {
 		throw new Error("The application domain is not a valid DNS hostname");
 	}
 
-	const pagesDomain = `pages.${domain}`;
-	if (pagesDomain.length > 253) {
+	const sitesDomain = `sites.${domain}`;
+	if (sitesDomain.length > 253) {
 		throw new Error(
-			"The application domain is too long to add the pages prefix",
+			"The application domain is too long to add the sites prefix",
 		);
 	}
 
@@ -88,8 +88,8 @@ export function resolveAppDomain(inputs: DomainInputs): string {
 	return candidates[0] as string;
 }
 
-export function pagesDomainFor(appDomain: string): string {
-	return `pages.${validateAppDomain(appDomain)}`;
+export function sitesDomainFor(appDomain: string): string {
+	return `sites.${validateAppDomain(appDomain)}`;
 }
 
 export function deploymentNameFor(appDomain: string): string {

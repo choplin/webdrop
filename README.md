@@ -16,8 +16,8 @@ explicit setup step; the development server does not change `node_modules`.
 
 Run the Vite development server. It builds the browser assets, starts the Worker
 with local bindings, and reloads changes. The control plane and
-`pages.localhost` share the development server's port, so the control plane can
-link to the local pages plane:
+`sites.localhost` share the development server's port, so the control plane can
+link to the local sites plane:
 
 ```sh
 pnpm dev
@@ -47,7 +47,7 @@ pnpm exec wrangler login
 pnpm run deploy -- --domain webdrop.example.com
 ```
 
-The script validates the hostname, derives `pages.webdrop.example.com`, builds
+The script validates the hostname, derives `sites.webdrop.example.com`, builds
 the application, and names its Cloudflare resources after the hostname. For
 example, `webdrop.example.com` creates Worker `webdrop-example-com` and R2
 bucket `webdrop-example-com-sites`. It provisions the `SITES` R2 binding when

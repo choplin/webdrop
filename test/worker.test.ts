@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import worker, { cleanupSites, handlePages, publishSite } from "../src/worker";
 
 const controlOrigin = "https://webdrop.example.test";
-const pagesOrigin = "https://pages.webdrop.example.test";
+const sitesOrigin = "https://sites.webdrop.example.test";
 
 interface PublishResult {
 	siteId: string;
@@ -100,7 +100,7 @@ async function publishCompletedSite(
 }
 
 async function pageFetch(path: string, init?: RequestInit): Promise<Response> {
-	return exports.default.fetch(`${pagesOrigin}${path}`, init);
+	return exports.default.fetch(`${sitesOrigin}${path}`, init);
 }
 
 async function storedObjectCount(): Promise<number> {
@@ -285,7 +285,7 @@ describe("Webdrop M1.1 host dispatch", () => {
 			unknownPagesRoute,
 		] = await Promise.all([
 			exports.default.fetch(`${controlOrigin}/p/demo/`),
-			exports.default.fetch(`${pagesOrigin}/`),
+			exports.default.fetch(`${sitesOrigin}/`),
 			exports.default.fetch("https://unknown.example.test/"),
 			pageFetch("/not-a-page"),
 		]);
@@ -430,7 +430,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 				{ path: "assets/site.css", content: "body {}" },
 			]),
 			storage,
-			"pages.webdrop.example.test",
+			"sites.webdrop.example.test",
 			() => siteId,
 			() => Date.parse("2026-08-05T00:00:00.000Z"),
 		);
@@ -475,7 +475,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 				body: publishForm([{ path: "index.html", content: "ttl" }], ttl),
 			}),
 			recordingStorage(),
-			"pages.webdrop.example.test",
+			"sites.webdrop.example.test",
 			() => crypto.randomUUID(),
 			() => Date.parse("2026-08-05T00:00:00.000Z"),
 		);
@@ -501,7 +501,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 				body: publishForm([{ path: "index.html", content: "ttl" }], ttl),
 			}),
 			storage,
-			"pages.webdrop.example.test",
+			"sites.webdrop.example.test",
 		);
 
 		expect(response.status).toBe(400);
@@ -509,7 +509,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		expect(storage.puts).toEqual([]);
 	});
 
-	it("uses the request scheme and port for local pages URLs", async () => {
+	it("uses the request scheme and port for local sites URLs", async () => {
 		const siteId = "00000000-0000-4000-8000-000000000006";
 		const response = await publishSite(
 			new Request("https://control.localhost:8787/publish", {
@@ -517,7 +517,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 				body: publishForm([{ path: "index.html", content: "local" }]),
 			}),
 			recordingStorage(),
-			"pages.localhost",
+			"sites.localhost",
 			() => siteId,
 		);
 
@@ -526,7 +526,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		if (!isPublishResult(result)) {
 			throw new Error("Expected a publish result");
 		}
-		expect(result.url).toBe(`https://pages.localhost:8787/p/${siteId}/`);
+		expect(result.url).toBe(`https://sites.localhost:8787/p/${siteId}/`);
 	});
 
 	it("keeps failed uploads hidden and does not return a publish URL", async () => {
@@ -536,7 +536,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		const response = await publishSite(
 			publishRequest([{ path: "index.html", content: "not active" }]),
 			storage,
-			"pages.webdrop.example.test",
+			"sites.webdrop.example.test",
 			() => siteId,
 		);
 
@@ -576,7 +576,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		const response = await publishSite(
 			publishRequest([{ path: "index.html", content: "replacement" }]),
 			storage,
-			"pages.webdrop.example.test",
+			"sites.webdrop.example.test",
 			() => siteId,
 		);
 
@@ -597,7 +597,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 			{ path: "assets/site.css", content: "body { color: rebeccapurple; }" },
 		]);
 
-		expect(result.url).toBe(`${pagesOrigin}/p/${result.siteId}/`);
+		expect(result.url).toBe(`${sitesOrigin}/p/${result.siteId}/`);
 		const [metadataObject, indexObject, cssObject] = await Promise.all([
 			env.SITES.get(`_meta/${result.siteId}.json`),
 			env.SITES.get(`sites/${result.siteId}/index.html`),
@@ -714,7 +714,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 			),
 			env.SITES.put(`sites/${siteId}/index.html`, "expires"),
 		]);
-		const request = new Request(`${pagesOrigin}/p/${siteId}/`);
+		const request = new Request(`${sitesOrigin}/p/${siteId}/`);
 		const headRequest = new Request(request, { method: "HEAD" });
 
 		const [getBefore, headBefore, getAt, headAfter] = await Promise.all([
@@ -782,7 +782,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		]);
 
 		const response = await handlePages(
-			new Request(`${pagesOrigin}/p/${siteId}/`),
+			new Request(`${sitesOrigin}/p/${siteId}/`),
 			env,
 			() => Date.parse("2026-08-05T00:30:00.000Z"),
 		);

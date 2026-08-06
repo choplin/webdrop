@@ -3,9 +3,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import {
 	deploymentNameFor,
-	pagesDomainFor,
 	resolveAppDomain,
 	sitesBucketNameFor,
+	sitesDomainFor,
 } from "./deploy-domain.ts";
 
 type JsonObject = Record<string, unknown>;
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
 		environment: process.env.APP_DOMAIN,
 		configuration: configurationDomain,
 	});
-	const pagesDomain = pagesDomainFor(appDomain);
+	const sitesDomain = sitesDomainFor(appDomain);
 	const deploymentName = deploymentNameFor(appDomain);
 	const sitesBucketName = sitesBucketNameFor(appDomain);
 
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
 	config.preview_urls = false;
 	config.routes = [
 		{ pattern: appDomain, custom_domain: true },
-		{ pattern: pagesDomain, custom_domain: true },
+		{ pattern: sitesDomain, custom_domain: true },
 	];
 	await writeFile(configPath, `${JSON.stringify(config, null, "\t")}\n`);
 
@@ -144,7 +144,7 @@ async function main(): Promise<void> {
 		options.dryRun ? "Deployment dry-run passed." : "Deployment complete.",
 	);
 	console.log(`Application: https://${appDomain}`);
-	console.log(`Published pages: https://${pagesDomain}`);
+	console.log(`Published sites: https://${sitesDomain}`);
 	console.log(`Worker: ${deploymentName}`);
 	console.log(`R2 bucket: ${sitesBucketName}`);
 	if (!options.dryRun) {

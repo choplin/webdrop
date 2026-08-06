@@ -793,7 +793,7 @@ async function handleControlPublish(
 	const response = await publishSite(
 		request,
 		env.SITES,
-		`pages.${env.APP_DOMAIN}`,
+		`sites.${env.APP_DOMAIN}`,
 	);
 	if (!isHtmxRequest(request)) {
 		return response;
@@ -901,7 +901,7 @@ export default {
 			return handleControl(request, env);
 		}
 
-		if (hostname === `pages.${env.APP_DOMAIN}`) {
+		if (hostname === `sites.${env.APP_DOMAIN}`) {
 			return handlePages(request, env);
 		}
 

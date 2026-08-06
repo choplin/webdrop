@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
 	deploymentNameFor,
-	pagesDomainFor,
 	resolveAppDomain,
 	sitesBucketNameFor,
+	sitesDomainFor,
 	validateAppDomain,
 } from "../scripts/deploy-domain";
 
 describe("deploy domain input", () => {
-	it("normalizes one application domain and derives the pages domain", () => {
+	it("normalizes one application domain and derives the sites domain", () => {
 		expect(validateAppDomain(" Webdrop.Example.com. ")).toBe(
 			"webdrop.example.com",
 		);
-		expect(pagesDomainFor("webdrop.example.com")).toBe(
-			"pages.webdrop.example.com",
+		expect(sitesDomainFor("webdrop.example.com")).toBe(
+			"sites.webdrop.example.com",
 		);
 	});
 

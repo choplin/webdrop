@@ -19,7 +19,7 @@
 	"cloudflare": {
 		"bindings": {
 			"APP_DOMAIN": {
-				"description": "Public hostname for Webdrop, such as webdrop.example.com. Published pages use pages.<hostname>."
+				"description": "Public hostname for Webdrop, such as webdrop.example.com. Published sites use sites.<hostname>."
 			}
 		}
 	},
