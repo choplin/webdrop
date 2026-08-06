@@ -250,19 +250,18 @@
 	}
 
 	.publish-result {
+		inline-size: min(100%, 32rem);
 		min-block-size: 0;
+	}
+
+	.publish-result:empty {
+		display: none;
 	}
 
 	.publish-result .alert {
 		inline-size: 100%;
 		border-radius: 0.75rem;
 		font-size: 0.875rem;
-	}
-
-	.publish-result .alert-success {
-		border: 1px solid #bfe0c9;
-		background: #f1fbf4;
-		color: #175c2f;
 	}
 
 	.publish-result .alert-error,
@@ -312,6 +311,64 @@
 	.publish-limit-list li + li::before {
 		content: "·";
 		margin-inline-end: 0.5rem;
+	}
+
+	.publish-complete {
+		min-block-size: 21rem;
+		display: grid;
+		align-content: center;
+		justify-items: center;
+		gap: 1rem;
+		text-align: center;
+	}
+
+	.publish-complete-icon {
+		inline-size: 7rem;
+		block-size: 7rem;
+		color: #16713a;
+		display: grid;
+		place-items: center;
+	}
+
+	.publish-complete-icon svg {
+		inline-size: 6.5rem;
+		block-size: 6.5rem;
+		fill: none;
+		stroke: currentcolor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 2.5;
+	}
+
+	.publish-complete-copy {
+		display: grid;
+		gap: 0.375rem;
+	}
+
+	.publish-complete-copy h2,
+	.publish-complete-copy p {
+		margin: 0;
+	}
+
+	.publish-complete-copy h2 {
+		font-size: 1.1875rem;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+	}
+
+	.publish-complete-copy p {
+		color: #666;
+		font-size: 0.875rem;
+	}
+
+	.publish-complete-link svg {
+		inline-size: 0.9375rem;
+		block-size: 0.9375rem;
+		fill: none;
+		stroke: currentcolor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.75;
 	}
 
 	.publish-form[aria-busy="true"] .publish-icon {
@@ -477,12 +534,6 @@
 #site-folder:focus-visible ~ .publish-picker-actions .publish-folder-picker {
 	outline: 3px solid rgb(0 102 255 / 0.28);
 	outline-offset: 3px;
-}
-
-.publish-result .alert-success {
-	border-color: #bfe0c9;
-	background-color: #f1fbf4;
-	color: #175c2f;
 }
 
 .publish-result .alert-error,

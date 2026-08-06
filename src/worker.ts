@@ -206,8 +206,11 @@ function publishSuccessFragment(url: string, expiresAt: string): Response {
 	const safeUrl = escapeHtml(url);
 	const safeExpiresAt = escapeHtml(expiresAt);
 	return new Response(
-		`<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"><div class="alert alert-success" role="status"><span>Site is live until <time datetime="${safeExpiresAt}">${safeExpiresAt}</time>.</span><a class="link" href="${safeUrl}">Open published site</a></div></section>`,
-		{ status: 201, headers: controlHtmlHeaders },
+		`<section class="publish-complete" aria-labelledby="publish-complete-title"><div class="publish-complete-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m3 12.5 6 6L21 5.5" /></svg></div><div class="publish-complete-copy" role="status" aria-live="polite" aria-atomic="true"><h2 id="publish-complete-title">Site published.</h2><p>Live until <time datetime="${safeExpiresAt}">${safeExpiresAt}</time>.</p></div><a class="btn btn-primary publish-complete-link" href="${safeUrl}"><span>Open published site</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></a></section>`,
+		{
+			status: 201,
+			headers: { ...controlHtmlHeaders, "HX-Retarget": "#publish-form" },
+		},
 	);
 }
 

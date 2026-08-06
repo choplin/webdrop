@@ -38,7 +38,7 @@
 								<div class="publish-picker-actions">
 									<label class="btn btn-primary publish-picker publish-file-picker" for="site-file"><span>Choose HTML file</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></label>
 									<label class="btn publish-picker publish-folder-picker" for="site-folder"><span>Choose folder</span></label>
-									<button id="publish-submit" class="btn btn-primary publish-submit" type="submit"><span>Publish site</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></button>
+									<button id="publish-submit" class="btn btn-primary publish-submit" type="submit"><span>Publish</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></button>
 								</div>
 								<div class="publish-selection">
 									<p id="selection-summary" class="field-help" aria-live="polite">No file or folder selected.</p>
@@ -57,13 +57,13 @@
 									<progress id="publish-progress" class="progress progress-primary" value="0" max="100">0%</progress>
 									<p id="publish-progress-status" class="field-help">Waiting to upload.</p>
 								</div>
+								<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"></section>
 							</form>
 						</div>
 					</section>
 					<div class="publish-metadata">
 						<div class="publish-limits"><span id="upload-limits-label" class="publish-limit-label">Upload limits</span><ul class="publish-limit-list" aria-labelledby="upload-limits-label"><li>100 files</li><li>10 MiB / file</li><li>50 MiB total</li></ul></div>
 					</div>
-					<section id="publish-result" class="publish-result" aria-live="polite" aria-atomic="true"></section>
 				</section>
 			</main>
 		</div>

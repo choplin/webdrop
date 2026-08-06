@@ -259,6 +259,10 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(document).toContain("Upload limits");
 		expect(document).toContain('for="site-file"><span>Choose HTML file</span>');
 		expect(document).toContain('for="site-folder"><span>Choose folder</span>');
+		expect(document).toContain(
+			'id="publish-submit" class="btn btn-primary publish-submit" type="submit"><span>Publish</span>',
+		);
+		expect(document).not.toContain("Publish site</span>");
 		expect(document).toContain('accept=".html,.htm,text/html"');
 		expect(document).toContain('class="brand-mark"');
 		expect(document).toContain('src="/assets/logo.png"');
@@ -275,6 +279,11 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(document).toContain(
 			'<option value="86400" selected>24 hours</option>',
 		);
+		const formStart = document.indexOf('<form id="publish-form"');
+		const resultStart = document.indexOf('<section id="publish-result"');
+		const formEnd = document.indexOf("</form>", formStart);
+		expect(resultStart).toBeGreaterThan(formStart);
+		expect(resultStart).toBeLessThan(formEnd);
 	});
 
 	it("returns 404 for cross-plane and unknown routes", async () => {
@@ -320,14 +329,12 @@ describe("Webdrop M1.1 host dispatch", () => {
 		for (const componentClass of [
 			"alert",
 			"alert-error",
-			"alert-success",
 			"btn",
 			"btn-primary",
 			"card",
 			"card-body",
 			"card-title",
 			"file-input",
-			"link",
 			"progress",
 			"progress-primary",
 		]) {
@@ -393,9 +400,26 @@ describe("Webdrop M2.1 publish boundary", () => {
 		expect(success.headers.get("Content-Type")).toBe(
 			"text/html; charset=utf-8",
 		);
+		expect(success.headers.get("HX-Retarget")).toBe("#publish-form");
 		const successFragment = await success.text();
-		expect(successFragment).toContain('id="publish-result"');
+		expect(successFragment).toContain('class="publish-complete"');
+		expect(successFragment).toContain(
+			'aria-labelledby="publish-complete-title"',
+		);
+		expect(successFragment).toContain('aria-live="polite"');
+		expect(successFragment).toContain('aria-atomic="true"');
+		expect(successFragment).toContain('role="status"');
+		expect(successFragment).toContain(
+			'<h2 id="publish-complete-title">Site published.</h2>',
+		);
+		expect(successFragment).toContain("Live until");
 		expect(successFragment).toContain("<time datetime=");
+		expect(successFragment).toContain(
+			'<a class="btn btn-primary publish-complete-link" href="https://sites.webdrop.example.test/p/',
+		);
+		expect(successFragment).toContain("<span>Open published site</span>");
+		expect(successFragment).not.toContain('class="alert');
+		expect(successFragment).not.toContain('id="publish-result"');
 
 		const failure = await htmxPublish([
 			{ path: "missing-index.html", content: "invalid" },
