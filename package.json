@@ -5,15 +5,23 @@
 	"type": "module",
 	"packageManager": "pnpm@11.15.0",
 	"scripts": {
-		"build": "vite build",
+		"build": "mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-build.log vite build",
 		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit && tsc --project scripts/tsconfig.json --noEmit",
-		"check:acceptance": "node scripts/validate-acceptance-config.ts ops/cloudflare/wrangler.acceptance.jsonc && pnpm build && mkdir -p .wrangler/acceptance-dry-run && WRANGLER_LOG_PATH=.wrangler/acceptance-dry-run/wrangler.log TMPDIR=.wrangler wrangler deploy --config ops/cloudflare/wrangler.acceptance.jsonc --dry-run --outdir ../../.wrangler/acceptance-dry-run",
+		"check:acceptance": "node scripts/deploy.ts --domain webdrop.acceptance.test --dry-run",
+		"deploy": "node scripts/deploy.ts",
 		"dev": "vite dev",
 		"format": "biome format --write .",
 		"generate:types": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
 		"preview": "vite preview",
 		"test": "pnpm build && mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
 		"typecheck": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit"
+	},
+	"cloudflare": {
+		"bindings": {
+			"APP_DOMAIN": {
+				"description": "Public hostname for Webdrop, such as webdrop.example.com. Published pages use pages.<hostname>."
+			}
+		}
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",

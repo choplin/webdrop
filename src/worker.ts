@@ -790,7 +790,11 @@ async function handleControlPublish(
 			: new Response("Forbidden", { status: 403 });
 	}
 
-	const response = await publishSite(request, env.SITES, env.PAGES_HOSTNAME);
+	const response = await publishSite(
+		request,
+		env.SITES,
+		`pages.${env.APP_DOMAIN}`,
+	);
 	if (!isHtmxRequest(request)) {
 		return response;
 	}
@@ -893,11 +897,11 @@ export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const hostname = new URL(request.url).hostname;
 
-		if (hostname === env.CONTROL_HOSTNAME) {
+		if (hostname === env.APP_DOMAIN) {
 			return handleControl(request, env);
 		}
 
-		if (hostname === env.PAGES_HOSTNAME) {
+		if (hostname === `pages.${env.APP_DOMAIN}`) {
 			return handlePages(request, env);
 		}
 

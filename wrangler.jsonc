@@ -15,14 +15,12 @@
 		"run_worker_first": true
 	},
 	"vars": {
-		// These are public hostnames. Cloudflare Access configuration is intentionally M4 scope.
-		"CONTROL_HOSTNAME": "webdrop.example.test",
-		"PAGES_HOSTNAME": "pages.webdrop.example.test"
+		// The deploy script replaces this placeholder with the user's public hostname.
+		"APP_DOMAIN": "webdrop.example.test"
 	},
 	"r2_buckets": [
 		{
-			"binding": "SITES",
-			"bucket_name": "webdrop-sites"
+			"binding": "SITES"
 		}
 	]
 }

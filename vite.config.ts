@@ -48,8 +48,7 @@ export default defineConfig(({ command }) => ({
 				? {
 						config: {
 							vars: {
-								CONTROL_HOSTNAME: "localhost",
-								PAGES_HOSTNAME: "pages.localhost",
+								APP_DOMAIN: "localhost",
 							},
 						},
 					}

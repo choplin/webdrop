@@ -24,20 +24,21 @@ IDs, private object bodies, or copied response bodies.
 - `PASS`: performed and the observed result matched the criterion.
 - `FAIL`: performed and the observed result did not match the criterion.
 - `NOT RUN`: not performed or evidence was unavailable. Never infer `PASS`.
+- `N/A`: an explicitly optional control was not enabled for this deployment.
 
 ## Configuration and access boundary
 
 | Check | Result | Non-secret evidence |
 | --- | --- | --- |
 | Local repository checks pass | NOT RUN | |
-| Acceptance configuration validator passes | NOT RUN | |
+| Shared deployment dry-run passes | NOT RUN | |
 | Wrangler deploy dry-run passes | NOT RUN | |
 | Only the application and pages custom domains route to the Worker | NOT RUN | |
 | `workers.dev` is disabled | NOT RUN | |
 | Preview URLs are disabled | NOT RUN | |
-| Both hostnames are covered by Access applications | NOT RUN | |
-| No more-specific Access application overlaps either hostname | NOT RUN | |
-| Neither hostname application allows Everyone, Bypass, or Service Auth | NOT RUN | |
+| Optional Access protects the complete Worker, or is recorded as not applicable | NOT RUN | |
+| Optional Access has no more-specific public override | NOT RUN | |
+| Optional Access allows no Everyone, Bypass, or Service Auth policy | NOT RUN | |
 | R2 public development URL is disabled | NOT RUN | |
 | R2 has no public custom domain | NOT RUN | |
 | Daily `0 3 * * *` UTC Cron Trigger is present | NOT RUN | |
@@ -46,13 +47,13 @@ IDs, private object bodies, or copied response bodies.
 
 | Check | Result | Non-secret evidence |
 | --- | --- | --- |
-| The authenticated creator can open the control hostname | NOT RUN | |
+| The creator can open the application hostname | NOT RUN | |
 | The creator can publish the approved fixture directory | NOT RUN | |
 | The returned URL uses the approved pages hostname | NOT RUN | |
-| A different authenticated viewer can open the published page | NOT RUN | |
-| An unauthenticated application-root request is stopped by Access | NOT RUN | |
-| An unauthenticated `POST /publish` is stopped by Access | NOT RUN | |
-| An unauthenticated request to the returned `/p/<site>/` URL is stopped by Access | NOT RUN | |
+| A different browser can open the published page | NOT RUN | |
+| Optional Access stops an unauthenticated application-root request | NOT RUN | |
+| Optional Access stops an unauthenticated `POST /publish` | NOT RUN | |
+| Optional Access stops an unauthenticated request to the returned `/p/<site>/` URL | NOT RUN | |
 | An uploading site is not served before activation | NOT RUN | |
 | The active site is served before its expiry | NOT RUN | |
 | The site returns 404 after its expiry | NOT RUN | |
