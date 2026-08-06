@@ -5,16 +5,26 @@
 	"type": "module",
 	"packageManager": "pnpm@11.15.0",
 	"scripts": {
-		"build": "mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-build.log vite build",
-		"check": "biome check . && mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit && tsc --project scripts/tsconfig.json --noEmit",
-		"check:acceptance": "node scripts/deploy.ts --domain webdrop.acceptance.test --dry-run",
-		"deploy": "node scripts/deploy.ts",
+		"prebuild": "mkdir -p .wrangler",
+		"build": "WRANGLER_LOG_PATH=.wrangler/wrangler-build.log vite build",
+		"precheck": "biome check .",
+		"check": "pnpm run typecheck",
+		"check:acceptance": "node deploy/cloudflare/deploy.ts --domain webdrop.acceptance.test --dry-run",
+		"deploy": "node deploy/cloudflare/deploy.ts",
 		"dev": "vite dev",
 		"format": "biome format --write .",
-		"generate:types": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
+		"pregenerate:types": "mkdir -p .wrangler types/generated",
+		"generate:types": "WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
 		"preview": "vite preview",
-		"test": "pnpm build && mkdir -p .wrangler && WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
-		"typecheck": "mkdir -p .wrangler types/generated && WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts && tsc --project tsconfig.json --noEmit && tsc --project test/tsconfig.json --noEmit && tsc --project tsconfig.browser.json --noEmit && tsc --project tsconfig.vite.json --noEmit"
+		"pretest": "pnpm run build",
+		"test": "WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
+		"pretypecheck": "pnpm run generate:types",
+		"typecheck": "pnpm run --sequential \"/^typecheck:(worker|test|browser|vite|deploy)$/\"",
+		"typecheck:worker": "tsc --project tsconfig.json --noEmit",
+		"typecheck:test": "tsc --project test/tsconfig.json --noEmit",
+		"typecheck:browser": "tsc --project tsconfig.browser.json --noEmit",
+		"typecheck:vite": "tsc --project tsconfig.vite.json --noEmit",
+		"typecheck:deploy": "tsc --project deploy/tsconfig.json --noEmit"
 	},
 	"cloudflare": {
 		"bindings": {

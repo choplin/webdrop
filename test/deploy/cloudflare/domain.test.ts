@@ -5,7 +5,7 @@ import {
 	sitesBucketNameFor,
 	sitesDomainFor,
 	validateAppDomain,
-} from "../scripts/deploy-domain";
+} from "../../../deploy/cloudflare/domain";
 
 describe("deploy domain input", () => {
 	it("normalizes one application domain and derives the sites domain", () => {

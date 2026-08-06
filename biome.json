@@ -4,7 +4,6 @@
 		"includes": [
 			"**",
 			"!**/.agents",
-			"!client/webdrop-design.html",
 			"!.direnv",
 			"!node_modules",
 			"!.pnpm-store",

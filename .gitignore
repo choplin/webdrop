@@ -7,4 +7,3 @@ dist/
 .env
 .env.*
 *.tsbuildinfo
-ops/cloudflare/acceptance-results.md

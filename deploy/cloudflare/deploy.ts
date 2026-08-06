@@ -6,7 +6,7 @@ import {
 	resolveAppDomain,
 	sitesBucketNameFor,
 	sitesDomainFor,
-} from "./deploy-domain.ts";
+} from "./domain.ts";
 
 type JsonObject = Record<string, unknown>;
 
