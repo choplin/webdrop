@@ -1,7 +1,12 @@
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { pagesDomainFor, resolveAppDomain } from "./deploy-domain.ts";
+import {
+	deploymentNameFor,
+	pagesDomainFor,
+	resolveAppDomain,
+	sitesBucketNameFor,
+} from "./deploy-domain.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -105,7 +110,10 @@ async function main(): Promise<void> {
 		configuration: configurationDomain,
 	});
 	const pagesDomain = pagesDomainFor(appDomain);
+	const deploymentName = deploymentNameFor(appDomain);
+	const sitesBucketName = sitesBucketNameFor(appDomain);
 
+	config.name = deploymentName;
 	config.vars = { APP_DOMAIN: appDomain };
 	config.workers_dev = false;
 	config.preview_urls = false;
@@ -137,6 +145,8 @@ async function main(): Promise<void> {
 	);
 	console.log(`Application: https://${appDomain}`);
 	console.log(`Published pages: https://${pagesDomain}`);
+	console.log(`Worker: ${deploymentName}`);
+	console.log(`R2 bucket: ${sitesBucketName}`);
 	if (!options.dryRun) {
 		console.log(
 			"Access protection is optional; these domains are public by default.",

@@ -48,9 +48,11 @@ pnpm run deploy -- --domain webdrop.example.com
 ```
 
 The script validates the hostname, derives `pages.webdrop.example.com`, builds
-the application, provisions the `SITES` R2 binding when needed, and deploys both
-hostnames as Worker Custom Domains. Use `--dry-run` to inspect the generated
-deployment without changing Cloudflare:
+the application, and names its Cloudflare resources after the hostname. For
+example, `webdrop.example.com` creates Worker `webdrop-example-com` and R2
+bucket `webdrop-example-com-sites`. It provisions the `SITES` R2 binding when
+needed and deploys both hostnames as Worker Custom Domains. Use `--dry-run` to
+inspect the generated deployment without changing Cloudflare:
 
 ```sh
 pnpm run deploy -- --domain webdrop.example.com --dry-run

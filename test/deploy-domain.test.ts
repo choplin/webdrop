@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+	deploymentNameFor,
 	pagesDomainFor,
 	resolveAppDomain,
+	sitesBucketNameFor,
 	validateAppDomain,
 } from "../scripts/deploy-domain";
 
@@ -13,6 +15,24 @@ describe("deploy domain input", () => {
 		expect(pagesDomainFor("webdrop.example.com")).toBe(
 			"pages.webdrop.example.com",
 		);
+	});
+
+	it("derives Cloudflare resource names from the application domain", () => {
+		expect(deploymentNameFor("webdrop.choplin.dev")).toBe(
+			"webdrop-choplin-dev",
+		);
+		expect(sitesBucketNameFor("webdrop.choplin.dev")).toBe(
+			"webdrop-choplin-dev-sites",
+		);
+	});
+
+	it("keeps derived resource names within Cloudflare limits", () => {
+		const domain = `${"a".repeat(50)}.${"b".repeat(50)}.example.com`;
+		const deploymentName = deploymentNameFor(domain);
+
+		expect(deploymentName).toHaveLength(58);
+		expect(deploymentName).toMatch(/-[a-f0-9]{8}$/);
+		expect(sitesBucketNameFor(domain)).toHaveLength(64);
 	});
 
 	it("accepts matching command, environment, and generated-config inputs", () => {

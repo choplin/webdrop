@@ -9,7 +9,10 @@ post-deployment control.
 The deploy script accepts one application hostname and derives the pages
 hostname as `pages.<application-hostname>`. It builds the reviewed Worker,
 configures exactly those two Custom Domains, disables `workers.dev` and preview
-URLs, and binds one automatically provisioned R2 bucket as `SITES`.
+URLs, and derives the Worker name by replacing dots in the application hostname
+with hyphens. The automatically provisioned `SITES` R2 bucket uses that Worker
+name with a `-sites` suffix. Longer names are shortened with a stable hash to
+stay within Cloudflare's resource-name limits.
 
 The R2 bucket is not a public origin. Confirm that its `r2.dev` URL is disabled
 and that no R2 custom domain is attached. The Worker decides whether an active,
@@ -42,6 +45,8 @@ The command must report these derived targets:
 ```text
 Application: https://webdrop.example.com
 Published pages: https://pages.webdrop.example.com
+Worker: webdrop-example-com
+R2 bucket: webdrop-example-com-sites
 ```
 
 The script rejects URLs, paths, wildcards, single-label names, placeholders,

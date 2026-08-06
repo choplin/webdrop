@@ -3,6 +3,17 @@ const placeholderDomains = new Set([
 	"webdrop.example.test",
 ]);
 
+const maximumDeploymentNameLength = 58;
+
+function shortHash(value: string): string {
+	let hash = 2_166_136_261;
+	for (const character of value) {
+		hash ^= character.codePointAt(0) ?? 0;
+		hash = Math.imul(hash, 16_777_619);
+	}
+	return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 export interface DomainInputs {
 	argument: string | undefined;
 	environment: string | undefined;
@@ -79,4 +90,21 @@ export function resolveAppDomain(inputs: DomainInputs): string {
 
 export function pagesDomainFor(appDomain: string): string {
 	return `pages.${validateAppDomain(appDomain)}`;
+}
+
+export function deploymentNameFor(appDomain: string): string {
+	const domain = validateAppDomain(appDomain);
+	const readableName = domain.replaceAll(".", "-");
+	if (readableName.length <= maximumDeploymentNameLength) {
+		return readableName;
+	}
+
+	const hash = shortHash(domain);
+	const prefixLength = maximumDeploymentNameLength - hash.length - 1;
+	const prefix = readableName.slice(0, prefixLength).replace(/-+$/, "");
+	return `${prefix}-${hash}`;
+}
+
+export function sitesBucketNameFor(appDomain: string): string {
+	return `${deploymentNameFor(appDomain)}-sites`;
 }
