@@ -37,6 +37,18 @@ pnpm build
 pnpm preview
 ```
 
+## Quality gates
+
+Run the same static checks, automated tests, and deployment dry run used by CI:
+
+```sh
+pnpm run ci
+```
+
+The deployment check generates and validates the Cloudflare deployment locally.
+It does not require Cloudflare credentials and does not change a Cloudflare
+environment.
+
 ## Deploy to Cloudflare
 
 Authenticate Wrangler, then pass the application hostname to the shared deploy

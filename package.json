@@ -7,6 +7,10 @@
 	"scripts": {
 		"prebuild": "mkdir -p .wrangler",
 		"build": "WRANGLER_LOG_PATH=.wrangler/wrangler-build.log vite build",
+		"ci": "pnpm run --sequential \"/^ci:(check|test|deploy)$/\"",
+		"ci:check": "pnpm run check",
+		"ci:test": "pnpm test",
+		"ci:deploy": "pnpm run check:acceptance",
 		"precheck": "biome check .",
 		"check": "pnpm run typecheck",
 		"check:acceptance": "node deploy/cloudflare/deploy.ts --domain webdrop.acceptance.test --dry-run",
