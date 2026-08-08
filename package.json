@@ -1,7 +1,9 @@
 {
 	"name": "webdrop",
-	"version": "0.0.0",
+	"version": "0.1.0",
+	"description": "Share static sites straight from your browser.",
 	"private": true,
+	"license": "MIT",
 	"type": "module",
 	"packageManager": "pnpm@11.15.0",
 	"scripts": {
@@ -19,6 +21,7 @@
 		"format": "biome format --write .",
 		"pregenerate:types": "mkdir -p .wrangler types/generated",
 		"generate:types": "WRANGLER_LOG_PATH=.wrangler/wrangler-types.log TMPDIR=.wrangler wrangler types types/generated/worker-configuration.d.ts",
+		"prepublishOnly": "node --eval \"throw new Error('Webdrop is not published through npm.')\"",
 		"preview": "vite preview",
 		"pretest": "pnpm run build",
 		"test": "WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
