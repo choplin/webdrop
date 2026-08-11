@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	selectedRelativePaths,
-	setHtmxMultipartParameters,
-} from "../client/publish-upload";
+import { selectedRelativePaths } from "../client/publish-upload";
 
 describe("browser publish upload preparation", () => {
 	it("strips exactly one shared selected-directory root", () => {
@@ -94,14 +91,5 @@ describe("browser publish upload preparation", () => {
 				},
 			]),
 		).toEqual({ paths: ["index.html", "assets/app.js"] });
-	});
-
-	it("replaces htmx's formDataProxy parameters with multipart FormData", () => {
-		const detail: { parameters: unknown } = { parameters: { proxy: true } };
-		const formData = new FormData();
-		formData.set("files", "[]");
-
-		expect(setHtmxMultipartParameters(detail, formData)).toBe(true);
-		expect(detail.parameters).toBe(formData);
 	});
 });

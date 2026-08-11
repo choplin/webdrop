@@ -68,11 +68,11 @@ async function publish(entries: UploadEntry[]): Promise<Response> {
 	});
 }
 
-async function htmxPublish(entries: UploadEntry[]): Promise<Response> {
+async function fragmentPublish(entries: UploadEntry[]): Promise<Response> {
 	return exports.default.fetch(`${controlOrigin}/publish`, {
 		method: "POST",
 		headers: {
-			"HX-Request": "true",
+			"X-Webdrop-Fragment": "publish",
 			Origin: controlOrigin,
 		},
 		body: publishForm(entries),
@@ -269,7 +269,7 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(document).toContain('src="/assets/app.js"');
 		expect(document).toContain("webkitdirectory");
 		expect(document).toContain("publish-client-validation");
-		expect(document).toContain('hx-post="/publish"');
+		expect(document).toContain('method="post" action="/publish"');
 		const selectionStart = document.indexOf('<div class="publish-selection">');
 		const expiryStart = document.indexOf('<div class="publish-expiry">');
 		expect(selectionStart).toBeGreaterThan(-1);
@@ -323,8 +323,8 @@ describe("Webdrop M1.1 host dispatch", () => {
 		expect(logo.headers.get("Content-Type")).toBe("image/png");
 		expect(pagesLogo.status).toBe(404);
 		const appSource = await app.text();
-		expect(appSource).toContain("htmx");
-		expect(appSource).toContain("setHtmxMultipartParameters");
+		expect(appSource).toContain("X-Webdrop-Fragment");
+		expect(appSource).not.toMatch(/\beval\s*\(/);
 		const css = await styles.text();
 		for (const componentClass of [
 			"alert",
@@ -392,15 +392,15 @@ describe("Webdrop M1.1 host dispatch", () => {
 });
 
 describe("Webdrop M2.1 publish boundary", () => {
-	it("renders htmx success and failure fragments for the publish target", async () => {
-		const success = await htmxPublish([
-			{ path: "index.html", content: "<h1>htmx</h1>" },
+	it("renders success and failure fragments for the publish target", async () => {
+		const success = await fragmentPublish([
+			{ path: "index.html", content: "<h1>Webdrop</h1>" },
 		]);
 		expect(success.status).toBe(201);
 		expect(success.headers.get("Content-Type")).toBe(
 			"text/html; charset=utf-8",
 		);
-		expect(success.headers.get("HX-Retarget")).toBe("#publish-form");
+		expect(success.headers.get("X-Webdrop-Target")).toBe("publish-form");
 		const successFragment = await success.text();
 		expect(successFragment).toContain('class="publish-complete"');
 		expect(successFragment).toContain(
@@ -421,7 +421,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		expect(successFragment).not.toContain('class="alert');
 		expect(successFragment).not.toContain('id="publish-result"');
 
-		const failure = await htmxPublish([
+		const failure = await fragmentPublish([
 			{ path: "missing-index.html", content: "invalid" },
 		]);
 		expect(failure.status).toBe(400);
@@ -433,7 +433,7 @@ describe("Webdrop M2.1 publish boundary", () => {
 		const response = await exports.default.fetch(`${controlOrigin}/publish`, {
 			method: "POST",
 			headers: {
-				"HX-Request": "true",
+				"X-Webdrop-Fragment": "publish",
 				Origin: "https://other.example.test",
 			},
 			body: publishForm([{ path: "index.html", content: "blocked" }]),

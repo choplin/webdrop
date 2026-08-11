@@ -209,7 +209,7 @@ function publishSuccessFragment(url: string, expiresAt: string): Response {
 		`<section class="publish-complete" aria-labelledby="publish-complete-title"><div class="publish-complete-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m3 12.5 6 6L21 5.5" /></svg></div><div class="publish-complete-copy" role="status" aria-live="polite" aria-atomic="true"><h2 id="publish-complete-title">Site published.</h2><p>Live until <time datetime="${safeExpiresAt}">${safeExpiresAt}</time>.</p></div><a class="btn btn-primary publish-complete-link" href="${safeUrl}"><span>Open published site</span><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" /></svg></a></section>`,
 		{
 			status: 201,
-			headers: { ...controlHtmlHeaders, "HX-Retarget": "#publish-form" },
+			headers: { ...controlHtmlHeaders, "X-Webdrop-Target": "publish-form" },
 		},
 	);
 }
@@ -765,8 +765,8 @@ function isSameOriginRequest(request: Request): boolean {
 	return origin !== null && origin === new URL(request.url).origin;
 }
 
-function isHtmxRequest(request: Request): boolean {
-	return request.headers.get("HX-Request") === "true";
+function isFragmentRequest(request: Request): boolean {
+	return request.headers.get("X-Webdrop-Fragment") === "publish";
 }
 
 function publishFailureMessage(status: number): string {
@@ -785,7 +785,7 @@ async function handleControlPublish(
 	env: Env,
 ): Promise<Response> {
 	if (!isSameOriginRequest(request)) {
-		return isHtmxRequest(request)
+		return isFragmentRequest(request)
 			? publishErrorFragment(
 					"This publish request did not come from this site.",
 					403,
@@ -798,7 +798,7 @@ async function handleControlPublish(
 		env.SITES,
 		`sites.${env.APP_DOMAIN}`,
 	);
-	if (!isHtmxRequest(request)) {
+	if (!isFragmentRequest(request)) {
 		return response;
 	}
 

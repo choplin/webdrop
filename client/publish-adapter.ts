@@ -1,7 +1,4 @@
-import {
-	selectedRelativePaths,
-	setHtmxMultipartParameters,
-} from "./publish-upload.js";
+import { selectedRelativePaths } from "./publish-upload.js";
 
 const maxFiles = 100;
 const maxFileBytes = 10 * 1024 * 1024;
@@ -54,18 +51,6 @@ function droppedEntry(item: DataTransferItem): DroppedEntry | null {
 		webkitGetAsEntry?: () => DroppedEntry | null;
 	};
 	return candidate.webkitGetAsEntry?.call(item) ?? null;
-}
-
-interface HtmxProgressDetail {
-	lengthComputable: boolean;
-	loaded: number;
-	total: number;
-}
-
-interface HtmxBeforeSwapDetail {
-	shouldSwap: boolean;
-	isError: boolean;
-	xhr: XMLHttpRequest;
 }
 
 function hasControlCharacter(value: string): boolean {
@@ -165,32 +150,6 @@ function prepareUpload(selectedFiles: UploadFile[]): PreparedUpload | string {
 	return { formData, fileCount: selectedFiles.length, totalBytes };
 }
 
-function isHtmxProgressDetail(value: unknown): value is HtmxProgressDetail {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"lengthComputable" in value &&
-		"loaded" in value &&
-		"total" in value &&
-		typeof value.lengthComputable === "boolean" &&
-		typeof value.loaded === "number" &&
-		typeof value.total === "number"
-	);
-}
-
-function isHtmxBeforeSwapDetail(value: unknown): value is HtmxBeforeSwapDetail {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"shouldSwap" in value &&
-		"isError" in value &&
-		"xhr" in value &&
-		typeof value.shouldSwap === "boolean" &&
-		typeof value.isError === "boolean" &&
-		value.xhr instanceof XMLHttpRequest
-	);
-}
-
 function formatBytes(bytes: number): string {
 	if (bytes < 1024 * 1024) {
 		return `${Math.ceil(bytes / 1024)} KiB`;
@@ -200,6 +159,8 @@ function formatBytes(bytes: number): string {
 }
 
 const form = document.querySelector<HTMLFormElement>("#publish-form");
+const publishSubmit =
+	document.querySelector<HTMLButtonElement>("#publish-submit");
 const htmlFileInput = document.querySelector<HTMLInputElement>("#site-file");
 const folderInput = document.querySelector<HTMLInputElement>("#site-folder");
 const ttlSelect = document.querySelector<HTMLSelectElement>("#publish-ttl");
@@ -309,6 +270,9 @@ function setPublishState(state: "invalid" | "ready" | "uploading"): void {
 			input.disabled = state === "uploading";
 		}
 	}
+	if (publishSubmit) {
+		publishSubmit.disabled = state === "uploading";
+	}
 }
 
 function showClientValidation(message: string | null): void {
@@ -416,27 +380,14 @@ form?.addEventListener("drop", async (event) => {
 	}
 });
 
-form?.addEventListener("htmx:configRequest", (event) => {
-	if (!(event instanceof CustomEvent)) {
-		return;
-	}
-
+form?.addEventListener("submit", (event) => {
+	event.preventDefault();
 	const prepared = updateSelectionSummary();
 	if (!prepared || !ttlSelect) {
-		event.preventDefault();
 		return;
 	}
 	prepared.formData.set("ttl", ttlSelect.value);
 
-	if (!setHtmxMultipartParameters(event.detail, prepared.formData)) {
-		showClientValidation(
-			"The upload request could not be prepared. Try again.",
-		);
-		event.preventDefault();
-	}
-});
-
-form?.addEventListener("htmx:beforeRequest", () => {
 	form.setAttribute("aria-busy", "true");
 	setPublishState("uploading");
 	if (progress) {
@@ -445,45 +396,57 @@ form?.addEventListener("htmx:beforeRequest", () => {
 	if (progressStatus) {
 		progressStatus.textContent = "Uploading 0%.";
 	}
-});
 
-form?.addEventListener("htmx:xhr:progress", (event) => {
-	if (
-		!(event instanceof CustomEvent) ||
-		!isHtmxProgressDetail(event.detail) ||
-		!event.detail.lengthComputable ||
-		event.detail.total === 0
-	) {
-		return;
-	}
-
-	const percent = Math.min(
-		100,
-		Math.round((event.detail.loaded / event.detail.total) * 100),
-	);
-	if (progress) {
-		progress.value = percent;
-	}
-	if (progressStatus) {
-		progressStatus.textContent = `Uploading ${percent}%.`;
-	}
-});
-
-form?.addEventListener("htmx:afterRequest", () => {
-	form.removeAttribute("aria-busy");
-	setPublishState("ready");
-});
-
-form?.addEventListener("htmx:beforeSwap", (event) => {
-	if (
-		!(event instanceof CustomEvent) ||
-		!isHtmxBeforeSwapDetail(event.detail)
-	) {
-		return;
-	}
-
-	if (event.detail.xhr.status >= 400) {
-		event.detail.shouldSwap = true;
-		event.detail.isError = false;
-	}
+	const request = new XMLHttpRequest();
+	request.open("POST", form.action);
+	request.setRequestHeader("Accept", "text/html");
+	request.setRequestHeader("X-Webdrop-Fragment", "publish");
+	request.upload.addEventListener("progress", (progressEvent) => {
+		if (!progressEvent.lengthComputable || progressEvent.total === 0) {
+			return;
+		}
+		const percent = Math.min(
+			100,
+			Math.round((progressEvent.loaded / progressEvent.total) * 100),
+		);
+		if (progress) {
+			progress.value = percent;
+		}
+		if (progressStatus) {
+			progressStatus.textContent = `Uploading ${percent}%.`;
+		}
+	});
+	const fail = () => {
+		form.removeAttribute("aria-busy");
+		setPublishState("ready");
+		showClientValidation(
+			"The upload failed. Check your connection and try again.",
+		);
+		if (progressStatus) {
+			progressStatus.textContent = "Upload failed.";
+		}
+	};
+	request.addEventListener("load", () => {
+		const targetId =
+			request.getResponseHeader("X-Webdrop-Target") === "publish-form"
+				? "publish-form"
+				: "publish-result";
+		const target = document.getElementById(targetId);
+		const template = document.createElement("template");
+		template.innerHTML = request.responseText.trim();
+		const replacement = template.content.firstElementChild;
+		if (!target || !replacement) {
+			fail();
+			return;
+		}
+		target.replaceWith(replacement);
+		if (targetId !== "publish-form") {
+			form.removeAttribute("aria-busy");
+			setPublishState("ready");
+		}
+	});
+	request.addEventListener("error", fail);
+	request.addEventListener("abort", fail);
+	request.addEventListener("timeout", fail);
+	request.send(prepared.formData);
 });

@@ -7,10 +7,6 @@ export interface SelectedFile {
 
 export type RelativePathResult = { paths: string[] } | { error: string };
 
-interface HtmxConfigRequestDetail {
-	parameters: unknown;
-}
-
 function hasControlCharacter(value: string): boolean {
 	for (const character of value) {
 		const codePoint = character.codePointAt(0);
@@ -84,21 +80,4 @@ export function selectedRelativePaths(
 	}
 
 	return { paths: splitPaths.map((segments) => segments.slice(1).join("/")) };
-}
-
-export function setHtmxMultipartParameters(
-	detail: unknown,
-	parameters: FormData,
-): detail is HtmxConfigRequestDetail {
-	if (
-		typeof detail !== "object" ||
-		detail === null ||
-		!("parameters" in detail)
-	) {
-		return false;
-	}
-
-	// htmx 2 exposes a formDataProxy here; it converts this FormData value itself.
-	(detail as HtmxConfigRequestDetail).parameters = parameters;
-	return true;
 }

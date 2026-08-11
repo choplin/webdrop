@@ -27,7 +27,7 @@
 					</header>
 					<section class="card publish-card" aria-labelledby="publish-heading">
 						<div class="card-body publish-card-body">
-							<form id="publish-form" class="publish-form" method="post" action="/publish" enctype="multipart/form-data" hx-post="/publish" hx-target="#publish-result" hx-swap="outerHTML" hx-encoding="multipart/form-data" hx-disabled-elt="#publish-submit">
+							<form id="publish-form" class="publish-form" method="post" action="/publish" enctype="multipart/form-data">
 								<input id="site-file" class="file-input publish-file-input" type="file" name="site-file" accept=".html,.htm,text/html" aria-describedby="site-files-help selection-summary publish-client-validation" />
 								<input id="site-folder" class="file-input publish-file-input" type="file" name="site-folder" webkitdirectory multiple aria-describedby="site-files-help selection-summary publish-client-validation" />
 								<div class="publish-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" /><path d="M12 16V10m-2.5 2.5L12 10l2.5 2.5" /></svg></div>
