@@ -1,6 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"types": ["@cloudflare/vitest-pool-workers/types"]
 	},
 	"include": [

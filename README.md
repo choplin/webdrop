@@ -1,5 +1,30 @@
 # Webdrop
 
+Share a static site from your browser and keep it available for a limited time.
+
+## Deploy your own Webdrop
+
+Run a one-shot deployment from npm without copying or connecting a Git
+repository:
+
+```sh
+npx @choplin/webdrop deploy --domain webdrop.example.com
+```
+
+You need:
+
+- a Cloudflare account;
+- an active Cloudflare DNS zone that you own; and
+- an application hostname in that zone, such as `webdrop.example.com`. Webdrop
+  also uses `sites.<hostname>` for published sites, so both hostnames must be
+  available for new Worker Custom Domains.
+
+The command authenticates through Wrangler and creates the Worker, its `SITES`
+R2 bucket, and Custom Domains for the application and published sites. It does
+not create a Git repository or configure continuous deployment. Cloudflare
+credentials remain in Wrangler's local configuration and are not stored by
+Webdrop.
+
 ## Setup
 
 Enter the Nix development shell and install the locked JavaScript dependencies:
@@ -49,7 +74,7 @@ The deployment check generates and validates the Cloudflare deployment locally.
 It does not require Cloudflare credentials and does not change a Cloudflare
 environment.
 
-## Deploy to Cloudflare
+## Deploy from source
 
 Authenticate Wrangler, then pass the application hostname to the shared deploy
 script:
@@ -70,7 +95,6 @@ inspect the generated deployment without changing Cloudflare:
 pnpm run deploy -- --domain webdrop.example.com --dry-run
 ```
 
-Deploy to Cloudflare uses the same script. Its setup form supplies `APP_DOMAIN`
-instead of the `--domain` argument. Cloudflare Access is optional and is not
-created by the script; the deployed hostnames are public unless the operator
-adds Access protection to the Worker after deployment.
+Cloudflare Access is optional and is not created by the script; the deployed
+hostnames are public unless the operator adds Access protection to the Worker
+after deployment.

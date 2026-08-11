@@ -2,6 +2,9 @@ node_modules/
 .wrangler/
 coverage/
 dist/
+/packages/webdrop/LICENSE
+/packages/webdrop/dist/
+/packages/webdrop/template/
 .dev.vars
 .dev.vars.*
 .env

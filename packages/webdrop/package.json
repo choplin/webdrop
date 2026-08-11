@@ -1,0 +1,34 @@
+{
+	"name": "@choplin/webdrop",
+	"version": "0.1.0",
+	"description": "Deploy Webdrop to your Cloudflare account.",
+	"license": "MIT",
+	"type": "module",
+	"bin": {
+		"webdrop": "dist/cli.js"
+	},
+	"files": [
+		"dist",
+		"template",
+		"README.md",
+		"LICENSE"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"prebuild": "pnpm --dir ../.. run build",
+		"build": "esbuild src/cli.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/cli.js",
+		"postbuild": "node scripts/stage-template.ts",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"wrangler": "4.118.0"
+	},
+	"devDependencies": {
+		"esbuild": "0.28.1"
+	}
+}

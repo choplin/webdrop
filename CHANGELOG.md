@@ -14,4 +14,4 @@ and this project adheres to
   straight from your browser.
 - Choose an expiry of 1 hour, 24 hours, or 7 days and open the resulting site
   from its shareable URL.
-- Deploy your own Webdrop instance to Cloudflare by following `README.md`.
+- Deploy your own Webdrop instance once with `npx @choplin/webdrop deploy`.

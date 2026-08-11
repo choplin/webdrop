@@ -3,7 +3,9 @@ const placeholderDomains = new Set([
 	"webdrop.example.test",
 ]);
 
-const maximumDeploymentNameLength = 58;
+// Wrangler derives the R2 bucket name as `${workerName}-sites`. Keep the
+// complete bucket name within Cloudflare's 63-character limit.
+const maximumDeploymentNameLength = 57;
 
 function shortHash(value: string): string {
 	let hash = 2_166_136_261;

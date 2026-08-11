@@ -11,6 +11,8 @@
 			"!.wtm",
 			"!coverage",
 			"!dist",
+			"!packages/webdrop/dist",
+			"!packages/webdrop/template",
 			"!target",
 			"!types/generated/worker-configuration.d.ts"
 		]

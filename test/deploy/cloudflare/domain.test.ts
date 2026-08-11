@@ -30,9 +30,9 @@ describe("deploy domain input", () => {
 		const domain = `${"a".repeat(50)}.${"b".repeat(50)}.example.com`;
 		const deploymentName = deploymentNameFor(domain);
 
-		expect(deploymentName).toHaveLength(58);
+		expect(deploymentName).toHaveLength(57);
 		expect(deploymentName).toMatch(/-[a-f0-9]{8}$/);
-		expect(sitesBucketNameFor(domain)).toHaveLength(64);
+		expect(sitesBucketNameFor(domain)).toHaveLength(63);
 	});
 
 	it("accepts matching command, environment, and generated-config inputs", () => {

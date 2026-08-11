@@ -15,7 +15,9 @@
 		"ci:deploy": "pnpm run check:acceptance",
 		"precheck": "biome check .",
 		"check": "pnpm run typecheck",
-		"check:acceptance": "node deploy/cloudflare/deploy.ts --domain webdrop.acceptance.test --dry-run",
+		"check:acceptance": "pnpm run --sequential \"/^check:acceptance:(manual|cli)$/\"",
+		"check:acceptance:manual": "node deploy/cloudflare/deploy.ts --domain webdrop.acceptance.test --dry-run",
+		"check:acceptance:cli": "node packages/webdrop/scripts/check-package.ts",
 		"deploy": "node deploy/cloudflare/deploy.ts",
 		"dev": "vite dev",
 		"format": "biome format --write .",
@@ -26,19 +28,13 @@
 		"pretest": "pnpm run build",
 		"test": "WRANGLER_LOG_PATH=.wrangler/wrangler-test.log TMPDIR=.wrangler vitest run",
 		"pretypecheck": "pnpm run generate:types",
-		"typecheck": "pnpm run --sequential \"/^typecheck:(worker|test|browser|vite|deploy)$/\"",
+		"typecheck": "pnpm run --sequential \"/^typecheck:(worker|test|browser|vite|deploy|cli)$/\"",
 		"typecheck:worker": "tsc --project tsconfig.json --noEmit",
 		"typecheck:test": "tsc --project test/tsconfig.json --noEmit",
 		"typecheck:browser": "tsc --project tsconfig.browser.json --noEmit",
 		"typecheck:vite": "tsc --project tsconfig.vite.json --noEmit",
-		"typecheck:deploy": "tsc --project deploy/tsconfig.json --noEmit"
-	},
-	"cloudflare": {
-		"bindings": {
-			"APP_DOMAIN": {
-				"description": "Public hostname for Webdrop, such as webdrop.example.com. Published sites use sites.<hostname>."
-			}
-		}
+		"typecheck:deploy": "tsc --project deploy/tsconfig.json --noEmit",
+		"typecheck:cli": "tsc --project packages/webdrop/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",

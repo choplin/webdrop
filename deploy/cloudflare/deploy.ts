@@ -1,12 +1,8 @@
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import {
-	deploymentNameFor,
-	resolveAppDomain,
-	sitesBucketNameFor,
-	sitesDomainFor,
-} from "./domain.ts";
+import { configureDeployment } from "./config.ts";
+import { resolveAppDomain } from "./domain.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -109,18 +105,7 @@ async function main(): Promise<void> {
 		environment: process.env.APP_DOMAIN,
 		configuration: configurationDomain,
 	});
-	const sitesDomain = sitesDomainFor(appDomain);
-	const deploymentName = deploymentNameFor(appDomain);
-	const sitesBucketName = sitesBucketNameFor(appDomain);
-
-	config.name = deploymentName;
-	config.vars = { APP_DOMAIN: appDomain };
-	config.workers_dev = false;
-	config.preview_urls = false;
-	config.routes = [
-		{ pattern: appDomain, custom_domain: true },
-		{ pattern: sitesDomain, custom_domain: true },
-	];
+	const deployment = configureDeployment(config, appDomain);
 	await writeFile(configPath, `${JSON.stringify(config, null, "\t")}\n`);
 
 	const wranglerArguments = [
@@ -143,10 +128,10 @@ async function main(): Promise<void> {
 	console.log(
 		options.dryRun ? "Deployment dry-run passed." : "Deployment complete.",
 	);
-	console.log(`Application: https://${appDomain}`);
-	console.log(`Published sites: https://${sitesDomain}`);
-	console.log(`Worker: ${deploymentName}`);
-	console.log(`R2 bucket: ${sitesBucketName}`);
+	console.log(`Application: https://${deployment.appDomain}`);
+	console.log(`Published sites: https://${deployment.sitesDomain}`);
+	console.log(`Worker: ${deployment.deploymentName}`);
+	console.log(`R2 bucket: ${deployment.sitesBucketName}`);
 	if (!options.dryRun) {
 		console.log(
 			"Access protection is optional; these domains are public by default.",
