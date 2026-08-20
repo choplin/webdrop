@@ -1,7 +1,7 @@
 {
 	"name": "webdrop",
 	"version": "0.1.0",
-	"description": "Share static sites straight from your browser.",
+	"description": "Drop and share your HTML.",
 	"private": true,
 	"license": "MIT",
 	"type": "module",
