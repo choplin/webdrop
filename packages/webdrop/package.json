@@ -3,6 +3,13 @@
 	"version": "0.1.0",
 	"description": "Deploy Webdrop to your Cloudflare account.",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/choplin/webdrop.git",
+		"directory": "packages/webdrop"
+	},
+	"homepage": "https://github.com/choplin/webdrop#readme",
+	"bugs": "https://github.com/choplin/webdrop/issues",
 	"type": "module",
 	"bin": {
 		"webdrop": "dist/cli.js"
