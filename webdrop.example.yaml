@@ -1,0 +1,23 @@
+version: 1
+
+target:
+  provider: cloudflare
+  hostname: webdrop.example.com
+
+features:
+  authentication:
+    provider: google
+
+secrets:
+  BETTER_AUTH_SECRET:
+    source: dotenv
+    path: .dev.vars
+    name: BETTER_AUTH_SECRET
+  GOOGLE_CLIENT_ID:
+    source: dotenv
+    path: .dev.vars
+    name: GOOGLE_CLIENT_ID
+  GOOGLE_CLIENT_SECRET:
+    source: dotenv
+    path: .dev.vars
+    name: GOOGLE_CLIENT_SECRET

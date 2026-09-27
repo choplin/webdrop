@@ -1,3 +1,20 @@
+import { type AuthEnvironment, authenticatedUserId, createAuth } from "./auth";
+
+type WorkerEnvironment = Omit<
+	Env,
+	| "AUTH_DB"
+	| "AUTHENTICATION"
+	| "BETTER_AUTH_SECRET"
+	| "GOOGLE_CLIENT_ID"
+	| "GOOGLE_CLIENT_SECRET"
+> & {
+	AUTH_DB?: D1Database;
+	AUTHENTICATION?: "disabled" | "google";
+	BETTER_AUTH_SECRET?: string;
+	GOOGLE_CLIENT_ID?: string;
+	GOOGLE_CLIENT_SECRET?: string;
+};
+
 const maxFiles = 100;
 const maxFileBytes = 10 * 1024 * 1024;
 const maxTotalBytes = 50 * 1024 * 1024;
@@ -782,7 +799,7 @@ function publishFailureMessage(status: number): string {
 
 async function handleControlPublish(
 	request: Request,
-	env: Env,
+	env: WorkerEnvironment,
 ): Promise<Response> {
 	if (!isSameOriginRequest(request)) {
 		return isFragmentRequest(request)
@@ -820,8 +837,58 @@ async function handleControlPublish(
 	return publishSuccessFragment(publishedSite.url, publishedSite.expiresAt);
 }
 
-async function handleControl(request: Request, env: Env): Promise<Response> {
+function authenticationMode(env: WorkerEnvironment): "disabled" | "google" {
+	return env.AUTHENTICATION === "disabled" ? "disabled" : "google";
+}
+
+function authEnvironment(env: WorkerEnvironment): AuthEnvironment {
+	if (env.AUTH_DB === undefined) {
+		throw new Error("AUTH_DB must be configured for Google authentication");
+	}
+	return {
+		APP_DOMAIN: env.APP_DOMAIN,
+		AUTH_DB: env.AUTH_DB,
+		BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET ?? "",
+		GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID ?? "",
+		GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET ?? "",
+	};
+}
+
+async function handleControl(
+	request: Request,
+	env: WorkerEnvironment,
+): Promise<Response> {
 	const url = new URL(request.url);
+	const authentication = authenticationMode(env);
+	if (url.pathname === "/api/config") {
+		return request.method === "GET"
+			? Response.json(
+					{ features: { authentication } },
+					{ headers: { "Cache-Control": "no-store" } },
+				)
+			: new Response(null, { status: 405, headers: { Allow: "GET" } });
+	}
+
+	if (url.pathname === "/api/auth" || url.pathname.startsWith("/api/auth/")) {
+		return authentication === "disabled"
+			? notFound()
+			: createAuth(authEnvironment(env)).handler(request);
+	}
+
+	if (url.pathname === "/api/me") {
+		if (authentication === "disabled") return notFound();
+		if (request.method !== "GET") {
+			return new Response(null, { status: 405, headers: { Allow: "GET" } });
+		}
+		const userId = await authenticatedUserId(
+			request,
+			createAuth(authEnvironment(env)),
+		);
+		return userId === null
+			? Response.json({ error: "Unauthorized" }, { status: 401 })
+			: Response.json({ userId }, { headers: { "Cache-Control": "no-store" } });
+	}
+
 	if (url.pathname === "/publish") {
 		return handleControlPublish(request, env);
 	}
@@ -845,7 +912,7 @@ async function handleControl(request: Request, env: Env): Promise<Response> {
 
 export async function handlePages(
 	request: Request,
-	env: Pick<Env, "SITES">,
+	env: Pick<WorkerEnvironment, "SITES">,
 	now: () => number = () => Date.now(),
 ): Promise<Response> {
 	const url = new URL(request.url);
@@ -897,7 +964,7 @@ export async function handlePages(
 }
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: WorkerEnvironment): Promise<Response> {
 		const hostname = new URL(request.url).hostname;
 
 		if (hostname === env.APP_DOMAIN) {
@@ -910,7 +977,10 @@ export default {
 
 		return notFound();
 	},
-	async scheduled(controller: ScheduledController, env: Env): Promise<void> {
+	async scheduled(
+		controller: ScheduledController,
+		env: WorkerEnvironment,
+	): Promise<void> {
 		await cleanupSites(env.SITES, () => controller.scheduledTime);
 	},
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<WorkerEnvironment>;

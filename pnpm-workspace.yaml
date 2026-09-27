@@ -4,4 +4,5 @@ packages:
 allowBuilds:
   '@parcel/watcher': false
   esbuild: true
+  msw: true
   workerd: true

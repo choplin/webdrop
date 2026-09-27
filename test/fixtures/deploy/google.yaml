@@ -1,0 +1,17 @@
+version: 1
+target:
+  provider: cloudflare
+  hostname: webdrop.acceptance.test
+features:
+  authentication:
+    provider: google
+secrets:
+  BETTER_AUTH_SECRET:
+    source: environment
+    name: BETTER_AUTH_SECRET
+  GOOGLE_CLIENT_ID:
+    source: environment
+    name: GOOGLE_CLIENT_ID
+  GOOGLE_CLIENT_SECRET:
+    source: environment
+    name: GOOGLE_CLIENT_SECRET

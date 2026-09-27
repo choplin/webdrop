@@ -1,8 +1,11 @@
 export interface DeployArguments {
 	action: "deploy";
+	applyMigrations: boolean;
 	domain: string | undefined;
 	dryRun: boolean;
 	json: boolean;
+	manifest: string | undefined;
+	secretsFile: string | undefined;
 }
 
 export type CliArguments =
@@ -24,6 +27,9 @@ export function parseArguments(arguments_: string[]): CliArguments {
 	let domain: string | undefined;
 	let dryRun = false;
 	let json = false;
+	let applyMigrations = false;
+	let manifest: string | undefined;
+	let secretsFile: string | undefined;
 
 	for (let index = 1; index < arguments_.length; index += 1) {
 		const argument = arguments_[index];
@@ -36,6 +42,34 @@ export function parseArguments(arguments_: string[]): CliArguments {
 		}
 		if (argument === "--json") {
 			json = true;
+			continue;
+		}
+		if (argument === "--apply-migrations") {
+			applyMigrations = true;
+			continue;
+		}
+		if (argument === "--manifest") {
+			manifest = arguments_[index + 1];
+			if (manifest === undefined || manifest.startsWith("--")) {
+				throw new Error("--manifest requires a path");
+			}
+			index += 1;
+			continue;
+		}
+		if (argument?.startsWith("--manifest=")) {
+			manifest = argument.slice("--manifest=".length);
+			continue;
+		}
+		if (argument === "--secrets-file") {
+			secretsFile = arguments_[index + 1];
+			if (secretsFile === undefined || secretsFile.startsWith("--")) {
+				throw new Error("--secrets-file requires a path");
+			}
+			index += 1;
+			continue;
+		}
+		if (argument?.startsWith("--secrets-file=")) {
+			secretsFile = argument.slice("--secrets-file=".length);
 			continue;
 		}
 		if (argument === "--domain") {
@@ -53,5 +87,17 @@ export function parseArguments(arguments_: string[]): CliArguments {
 		throw new Error(`Unknown deploy option: ${argument ?? ""}`);
 	}
 
-	return { action: "deploy", domain, dryRun, json };
+	if (dryRun && applyMigrations) {
+		throw new Error("--apply-migrations cannot be combined with --dry-run");
+	}
+
+	return {
+		action: "deploy",
+		applyMigrations,
+		domain,
+		dryRun,
+		json,
+		manifest,
+		secretsFile,
+	};
 }

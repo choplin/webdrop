@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Sign in with Google, keep a secure browser session, and sign out using Better
+  Auth with a Cloudflare D1 database.
+- Describe the Cloudflare target, authentication feature, and environment or
+  dotenv secret sources in `webdrop.yaml`; authentication can be disabled for
+  upload-and-view-only deployments.
+
 ## [0.1.0] - 2026-09-05
 
 ### Added

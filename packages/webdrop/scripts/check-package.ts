@@ -1,5 +1,13 @@
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import {
+	access,
+	mkdir,
+	mkdtemp,
+	readdir,
+	readFile,
+	rm,
+	writeFile,
+} from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -51,6 +59,33 @@ try {
 	if (archives.length !== 1) {
 		throw new Error(`Expected one package archive, found ${archives.length}`);
 	}
+	const stagedConfig = JSON.parse(
+		await readFile(
+			join(packageDirectory, "template/webdrop/wrangler.json"),
+			"utf8",
+		),
+	) as { d1_databases?: Array<{ binding?: string; migrations_dir?: string }> };
+	const authDatabase = stagedConfig.d1_databases?.find(
+		(database) => database.binding === "AUTH_DB",
+	);
+	if (authDatabase?.migrations_dir !== "migrations") {
+		throw new Error(
+			"Packaged AUTH_DB must use the packaged migrations directory",
+		);
+	}
+	await access(
+		join(packageDirectory, "template/webdrop/migrations/0001_better_auth.sql"),
+	);
+	await writeFile(
+		join(temporaryDirectory, "webdrop.yaml"),
+		`version: 1
+target:
+  provider: cloudflare
+  hostname: webdrop-package.acceptance.test
+features:
+  authentication: disabled
+`,
+	);
 
 	await run(
 		"npx",
@@ -60,8 +95,6 @@ try {
 			join(temporaryDirectory, archives[0] as string),
 			"webdrop",
 			"deploy",
-			"--domain",
-			"webdrop-package.acceptance.test",
 			"--dry-run",
 			"--json",
 		],

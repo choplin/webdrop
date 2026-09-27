@@ -22,16 +22,59 @@ into Webdrop, choose when it expires, and send the link.
 
 ## Deploy Webdrop
 
-Deploy Webdrop to your Cloudflare account with one command. Replace
-`webdrop.example.com` with a hostname in a Cloudflare DNS zone you own:
+Create `webdrop.yaml` to describe the deployment. Replace the hostname with one
+in a Cloudflare DNS zone you own:
+
+```yaml
+version: 1
+target:
+  provider: cloudflare
+  hostname: webdrop.example.com
+features:
+  authentication:
+    provider: google
+secrets:
+  BETTER_AUTH_SECRET:
+    source: dotenv
+    path: .dev.vars
+    name: BETTER_AUTH_SECRET
+  GOOGLE_CLIENT_ID:
+    source: dotenv
+    path: .dev.vars
+    name: GOOGLE_CLIENT_ID
+  GOOGLE_CLIENT_SECRET:
+    source: dotenv
+    path: .dev.vars
+    name: GOOGLE_CLIENT_SECRET
+```
+
+Then deploy with one command:
 
 ```sh
-npx @choplin/webdrop deploy --domain webdrop.example.com
+npx @choplin/webdrop deploy
 ```
 
 Wrangler asks you to sign in to Cloudflare when needed. When the deployment
 finishes, the command prints the URL for your Webdrop app. No repository copy
 or continuous deployment setup is required.
+
+By default, Wrangler checks for pending D1 migrations after deployment and asks
+before applying them. Pass `--apply-migrations` to apply pending migrations
+without confirmation, such as from CI or another non-interactive shell.
+
+To deploy only upload and viewing, disable authentication and omit `secrets`:
+
+```yaml
+version: 1
+target:
+  provider: cloudflare
+  hostname: webdrop.example.com
+features:
+  authentication: disabled
+```
+
+This configuration does not provision D1, require OAuth secrets, expose auth
+API routes, or show login controls.
 
 ### What you need
 
@@ -40,6 +83,17 @@ or continuous deployment setup is required.
 - An active Cloudflare DNS zone that you own
 - Two available hostnames: `webdrop.example.com` and
   `sites.webdrop.example.com`
+- A Google OAuth web client with this authorized redirect URI:
+  `https://webdrop.example.com/api/auth/callback/google`
+
+Create the referenced, ignored `.dev.vars` file before development or deployment.
+Use a fresh random value of at least 32 characters for `BETTER_AUTH_SECRET`:
+
+```dotenv
+BETTER_AUTH_SECRET=replace-me
+GOOGLE_CLIENT_ID=replace-with-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=replace-with-google-oauth-client-secret
+```
 
 ### What gets deployed
 
@@ -47,6 +101,7 @@ The command creates or updates:
 
 - a Webdrop Worker;
 - an R2 bucket for published sites;
+- a D1 database for users and sessions;
 - a Custom Domain for `webdrop.example.com`; and
 - a Custom Domain for `sites.webdrop.example.com`.
 
@@ -57,9 +112,7 @@ To validate the package and generated configuration without changing your
 Cloudflare account, run a dry deployment:
 
 ```sh
-npx @choplin/webdrop deploy \
-  --domain webdrop.example.com \
-  --dry-run
+npx @choplin/webdrop deploy --dry-run
 ```
 
 ## Publish your HTML
@@ -115,13 +168,14 @@ with flakes enabled in addition to the Cloudflare prerequisites above.
 nix develop
 pnpm install --frozen-lockfile
 pnpm exec wrangler login
-pnpm run deploy -- --domain webdrop.example.com
+cp webdrop.example.yaml webdrop.yaml
+pnpm run deploy
 ```
 
 Preview the generated deployment without changing Cloudflare:
 
 ```sh
-pnpm run deploy -- --domain webdrop.example.com --dry-run
+pnpm run deploy -- --dry-run
 ```
 
 ## Develop locally
@@ -131,7 +185,14 @@ Set up the repository:
 ```sh
 nix develop
 pnpm install --frozen-lockfile
+cp .dev.vars.example .dev.vars
+pnpm run auth:migrate:local
 ```
+
+Fill in `.dev.vars` with a Better Auth secret and Google OAuth credentials. For
+local Google login, add
+`https://localhost:8787/api/auth/callback/google` to the OAuth client's
+authorized redirect URIs. The file is ignored by Git.
 
 Start Webdrop and open `https://localhost:8787`:
 

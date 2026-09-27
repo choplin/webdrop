@@ -33,7 +33,9 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"wrangler": "4.118.0"
+		"ci-info": "4.4.0",
+		"wrangler": "4.118.0",
+		"yaml": "2.8.1"
 	},
 	"devDependencies": {
 		"esbuild": "0.28.1"

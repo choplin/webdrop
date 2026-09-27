@@ -1,3 +1,5 @@
+import { cp } from "node:fs/promises";
+import { resolve } from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
@@ -23,6 +25,17 @@ export default defineConfig(({ command }) => ({
 		},
 	},
 	plugins: [
+		{
+			name: "copy-auth-migrations",
+			async writeBundle(outputOptions) {
+				if (!outputOptions.dir?.endsWith("/webdrop")) return;
+				await cp(
+					resolve("migrations"),
+					resolve(outputOptions.dir, "migrations"),
+					{ recursive: true },
+				);
+			},
+		},
 		{
 			name: "preserve-http2-authority",
 			enforce: "pre",
@@ -54,6 +67,17 @@ export default defineConfig(({ command }) => ({
 					}
 				: undefined,
 		),
+		{
+			name: "remove-built-dev-secrets",
+			enforce: "post",
+			generateBundle(_outputOptions, bundle) {
+				for (const fileName of Object.keys(bundle)) {
+					if (fileName === ".dev.vars" || fileName.endsWith("/.dev.vars")) {
+						delete bundle[fileName];
+					}
+				}
+			},
+		},
 	],
 	preview: {
 		port: 8787,
