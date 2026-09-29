@@ -32,6 +32,23 @@ function run(command: string, arguments_: string[]): Promise<void> {
 	});
 }
 
+async function stop(child: ReturnType<typeof spawn>): Promise<void> {
+	if (child.exitCode !== null || child.signalCode !== null) return;
+
+	await new Promise<void>((resolvePromise, reject) => {
+		const forceKill = setTimeout(() => child.kill("SIGKILL"), 5_000);
+		child.once("error", (error) => {
+			clearTimeout(forceKill);
+			reject(error);
+		});
+		child.once("exit", () => {
+			clearTimeout(forceKill);
+			resolvePromise();
+		});
+		child.kill("SIGTERM");
+	});
+}
+
 function localRequest(
 	path: string,
 	method = "GET",
@@ -101,7 +118,7 @@ try {
 	throw error;
 }
 
-const previewProcess = spawn("pnpm", ["preview"], {
+const previewProcess = spawn(process.execPath, ["scripts/preview.ts"], {
 	env: {
 		...process.env,
 		BETTER_AUTH_SECRET: "environment-secret-that-is-at-least-32-characters",
@@ -168,6 +185,6 @@ try {
 	}
 	console.log("Production preview auth: OK");
 } finally {
-	previewProcess.kill("SIGTERM");
+	await stop(previewProcess);
 	await rm(temporaryDirectory, { recursive: true });
 }
