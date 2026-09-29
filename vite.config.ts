@@ -64,6 +64,9 @@ export default defineConfig(({ command }) => ({
 								APP_DOMAIN: "localhost",
 							},
 						},
+						persistState: process.env.WEBDROP_PREVIEW_PERSIST_PATH
+							? { path: process.env.WEBDROP_PREVIEW_PERSIST_PATH }
+							: true,
 					}
 				: undefined,
 		),
